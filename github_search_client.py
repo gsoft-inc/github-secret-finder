@@ -39,6 +39,8 @@ class GithubSearchClient(object):
                 self._history = json.load(f)
 
     def _save_history(self):
-        with open(self._search_history_file_name, "w") as f:
+        tmp_file = self._search_history_file_name + ".tmp"
+        with open(tmp_file, "w") as f:
             json.dump(self._history, f, indent=4)
+        os.replace(tmp_file, self._search_history_file_name)
 
