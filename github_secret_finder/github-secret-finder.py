@@ -1,11 +1,12 @@
+#!/usr/bin/env python3
+
 import argparse
 
-from github_api_client import GithubApiClient
-from github_search_client import GithubSearchClient
+from analysis import PatchAnalyzer
+from github.github_api_client import GithubApiClient
+from github.github_search_client import GithubSearchClient
 import json
 import os
-
-from patch_secret_finder import PatchSecretFinder
 
 
 class GithubSecretFinder(object):
@@ -52,7 +53,7 @@ class GithubSecretFinder(object):
 
             print(url)
             patch = self._api.get_commit_patch(url)
-            for line, details in PatchSecretFinder().find_secrets(patch):
+            for line, details in PatchAnalyzer().find_secrets(patch):
                 yield url, line, details
 
             self._analyzed_commits.append(commit_id)
@@ -95,7 +96,8 @@ def main():
     names = create_list_from_args(args.names, args.name)
     users = create_list_from_args(args.users, args.user)
 
-    with open("data/findings.txt", "a") as f:
+    findings_file = "data/findings.txt"
+    with open(findings_file, "a" if os.path.exists(findings_file) else "w") as f:
         for user in users:
             for x in finder.find_by_username(user):
                 handle(f, x)

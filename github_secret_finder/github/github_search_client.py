@@ -1,4 +1,4 @@
-from github_rate_limited_requester import GithubRateLimitedRequester
+from .github_rate_limited_requester import GithubRateLimitedRequester
 import json
 import os
 

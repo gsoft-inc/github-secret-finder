@@ -3,7 +3,7 @@ from detect_secrets.plugins.common import initialize
 from unidiff import PatchSet, UnidiffParseError
 
 
-class PatchSecretFinder(object):
+class PatchAnalyzer(object):
     def __init__(self):
         active_plugins = {}
         for plugin in PluginOptions.all_plugins:
