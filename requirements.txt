@@ -1,3 +1,4 @@
 unidiff
 requests
 detect_secrets
+sqlitedict

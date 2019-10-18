@@ -1,33 +1,24 @@
 #!/usr/bin/env python3
 
 import argparse
-
 from analysis import PatchAnalyzer
-from github.github_api_client import GithubApiClient
-from github.github_search_client import GithubSearchClient
-import json
-import os
+from github import GithubApiClient, CachedGithubSearchClient, GithubSearchClient
+from sqlitedict import SqliteDict
 
 
 class GithubSecretFinder(object):
-    _analyzed_commits_file_name = "data/analyzed-commits.json"
-
-    def __init__(self, tokens):
-        self._search = GithubSearchClient(tokens)
+    def __init__(self, tokens, db_file):
+        self._db_file = db_file
+        self._search = CachedGithubSearchClient(GithubSearchClient(tokens), db_file, "queries")
         self._api = GithubApiClient(tokens)
-        self._load_analyzed_commits()
 
-    def _load_analyzed_commits(self):
-        self._analyzed_commits = []
-        if os.path.isfile(self._analyzed_commits_file_name):
-            with open(self._analyzed_commits_file_name, "r") as f:
-                self._analyzed_commits = json.load(f)
+    def __enter__(self):
+        if not hasattr(self, '_db') or self._db is None:
+            self._db = SqliteDict(self._db_file, tablename="analyzed_commits", autocommit=True)
+        return self
 
-    def _save_analyzed_commits(self):
-        tmp_file = self._analyzed_commits_file_name + ".tmp"
-        with open(tmp_file, "w") as f:
-            json.dump(self._analyzed_commits, f, indent=4)
-        os.replace(tmp_file, self._analyzed_commits_file_name)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._db.close()
 
     def find_by_username(self, username):
         for qualifier in ["committer", "author"]:
@@ -46,9 +37,8 @@ class GithubSecretFinder(object):
 
     def _find(self, query):
         print("Query: %s" % query)
-        for url in self._search.search_commits(query):
-            commit_id = url[url.rfind("/") + 1:]
-            if commit_id in self._analyzed_commits:
+        for commit, url in self._search.search_commits(query):
+            if commit in self._db:
                 continue
 
             print(url)
@@ -56,14 +46,13 @@ class GithubSecretFinder(object):
             for line, details in PatchAnalyzer().find_secrets(patch):
                 yield url, line, details
 
-            self._analyzed_commits.append(commit_id)
-            self._save_analyzed_commits()
+            self._db[commit] = None
 
 
-def handle(f, x):
+def handle(findings_db, x):
     commit_url, line, details = x
     print(commit_url, line, details)
-    f.write("%s - %s - %s\n" % (commit_url, line.encode("utf-8"), json.dumps(details)))
+    findings_db[commit_url] = (line, details)
 
 
 def create_list_from_args(file_name, single_value):
@@ -90,25 +79,26 @@ def main():
     parser.add_argument('--filename-blacklist', '-fb', action="store", dest='filename-blacklist', help='Regex to blacklist file names.')
     args = parser.parse_args()
 
-    finder = GithubSecretFinder(args.tokens.split(","))
-
     emails = create_list_from_args(args.emails, args.email)
     names = create_list_from_args(args.names, args.name)
     users = create_list_from_args(args.users, args.user)
 
-    findings_file = "data/findings.txt"
-    with open(findings_file, "a" if os.path.exists(findings_file) else "w") as f:
-        for user in users:
-            for x in finder.find_by_username(user):
-                handle(f, x)
+    tokens = [t.strip() for t in args.tokens.split(",")]
 
-        for email in emails:
-            for x in finder.find_by_email(email):
-                handle(f, x)
+    database_file_name = "./github-secret-finder.sqlite"
+    with GithubSecretFinder(tokens, database_file_name) as finder:
+        with SqliteDict(database_file_name, tablename="findings", autocommit=True) as findings_db:
+            for user in users:
+                for x in finder.find_by_username(user):
+                    handle(findings_db, x)
 
-        for name in names:
-            for x in finder.find_by_name(name):
-                handle(f, x)
+            for email in emails:
+                for x in finder.find_by_email(email):
+                    handle(findings_db, x)
+
+            for name in names:
+                for x in finder.find_by_name(name):
+                    handle(findings_db, x)
 
 
 if __name__ == "__main__":
