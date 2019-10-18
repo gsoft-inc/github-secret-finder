@@ -1,6 +1,8 @@
+from detect_secrets.core.constants import VerifiedResult
 from detect_secrets.core.usage import PluginOptions
 from detect_secrets.plugins.common import initialize
 from unidiff import PatchSet, UnidiffParseError
+from .Secret import Secret
 
 
 class PatchAnalyzer(object):
@@ -33,4 +35,4 @@ class PatchAnalyzer(object):
                         if line.is_added:
                             l = line.value.strip()
                             for k in p.analyze_string(l, line.target_line_no, patch_file.path):
-                                yield l, k.json()
+                                yield Secret(k.type, k.filename, k.lineno, k.secret_value, p.verify(k.secret_value, content=l) == VerifiedResult.VERIFIED_TRUE)
