@@ -8,8 +8,8 @@ class GithubApiClient(object):
     def get_commit_patch(self, url):
         content = ""
         response = self._requester.get(url)
-        if response.status_code != 200:
-            return content
+        if not response:
+            return None
 
         json_response = response.json()
 

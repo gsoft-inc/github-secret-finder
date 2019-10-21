@@ -4,6 +4,8 @@ import argparse
 import os
 from secret_finder import SecretFinder
 from scheduling import QueryScheduler
+import logging
+
 
 def create_list_from_args(file_name, single_value = None):
     if single_value:
@@ -38,13 +40,14 @@ def main():
     parser.add_argument('--email', '-e', action="store", dest='email', help="Single email address to monitor.")
     parser.add_argument('--names', '-N', action='store', dest='names', help='File containing full names to monitor.')
     parser.add_argument('--name', '-n', action="store", dest='name', help="Single full name to monitor.")
-
     parser.add_argument('--tokens', '-t', action="store", dest='tokens', help="Github tokens separated by a comma (,)", required=True)
-
     parser.add_argument('--blacklist', '-B', action='store', dest='blacklist_file', default=default_blacklist, help='File containing regexes to blacklist file names. Defaults to default-blacklist.json')
-
     parser.add_argument('--verbose', '-V', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger("sqlitedict").setLevel(logging.ERROR)
+        logging.getLogger().setLevel(logging.INFO)
 
     emails = create_list_from_args(args.emails, args.email)
     names = create_list_from_args(args.names, args.name)
@@ -53,7 +56,7 @@ def main():
     tokens = [t.strip() for t in args.tokens.split(",")]
 
     database_file_name = "./github-secret-finder.sqlite"
-    with SecretFinder(tokens, database_file_name, args.blacklist_file, verbose=args.verbose) as finder:
+    with SecretFinder(tokens, database_file_name, args.blacklist_file) as finder:
         scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, print_result, database_file_name)
         scheduler.execute(users, emails, names)
 

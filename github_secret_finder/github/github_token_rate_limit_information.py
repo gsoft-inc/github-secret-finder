@@ -11,8 +11,10 @@ class GithubTokenRateLimitInformation(object):
 
     def update(self, response):
         server_now = datetime(*eut.parsedate(response.headers["date"])[:6])
-        reset_offset = datetime.utcfromtimestamp(int(response.headers["X-RateLimit-Reset"])) - server_now
-        self.reset_time = datetime.utcnow() + reset_offset
-        self.remaining = int(response.headers["X-RateLimit-Remaining"])
-        self.limit = int(response.headers["X-RateLimit-Limit"])
+
+        if "X-RateLimit-Reset" in response.headers:
+            reset_offset = datetime.utcfromtimestamp(int(response.headers["X-RateLimit-Reset"])) - server_now
+            self.reset_time = datetime.utcnow() + reset_offset
+            self.remaining = int(response.headers["X-RateLimit-Remaining"])
+            self.limit = int(response.headers["X-RateLimit-Limit"])
 
