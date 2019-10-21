@@ -1,6 +1,9 @@
 [
   {
-    "secret": "^\"\"(\\);)?$"
+    "secret": "^(\"\"|'')?(\\))?[;,]?$"
+  },
+  {
+    "secret": "(\\*|#)+"
   },
   {
     "file": ".*\\.ps1$",
@@ -29,35 +32,65 @@
     "code": "IDEtalkID"
   },
   {
-    "file": "\\.vsto",
+    "file": "\\.vsto$",
     "code": "assemblyIdentity"
   },
   {
-    "file": "\\.csproj",
+    "file": "\\.csproj$",
     "code": "PublishedHash"
   },
   {
-    "file": "\\.bower\\.json",
+    "file": "\\.bower\\.json$",
     "code": "commit"
   },
   {
-    "file": "\\.xcscheme",
+    "file": "\\.xcscheme$",
     "code": "BlueprintIdentifier"
   },
   {
-    "file": "Web\\.config",
-    "code": "PublicKeyToken"
+    "file": "(?i)Web\\.config(\\.(un)?install\\.xdt)?$",
+    "code": "(?i)PublicKeyToken"
   },
   {
-    "file": "project\\.lock\\.json",
+    "file": "(?i)App\\.config$",
+    "code": "(?i)PublicKeyToken"
+  },
+  {
+    "file": "\\.dll\\.config$",
+    "code": "(?i)PublicKeyToken"
+  },
+  {
+    "file": "project\\.lock\\.json$",
     "code": "sha512"
   },
   {
-    "file": "\\.apm/.*package.json",
+    "file": "\\.apm/.*package.json$",
     "code": "_shasum"
   },
   {
-    "file": "\\.json",
+    "file": "\\.json$",
     "code": "(gitHead|shasum)"
+  },
+  {
+    "file": "\\.deps\\.json",
+    "code": "signature"
+  },
+  {
+    "file": "precache-manifest.*\\.js$",
+    "code": "revision"
+  },
+  {
+    "file": "(?i)Pipfile\\.lock$",
+    "code": "sha256"
+  },
+  {
+    "file": "csproj\\.nuget\\.cache"
+  },
+  {
+    "file": "\\.import/.*\\.md5"
+  },
+  {
+    "file": "(?i)Cargo.lock",
+    "code": "checksum"
   }
 ]
