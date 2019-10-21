@@ -6,7 +6,8 @@ import logging
 
 
 class SecretFinder(object):
-    def __init__(self, tokens, db_file, blacklist_file):
+    def __init__(self, tokens, db_file, blacklist_file, cache_only):
+        self._cache_only = cache_only
         self._db_file = db_file
         self._search = CachedGithubSearchClient(GithubSearchClient(tokens), db_file, "queries")
         self._api = GithubApiClient(tokens)
@@ -27,21 +28,34 @@ class SecretFinder(object):
 
     def find_by_username(self, username):
         for qualifier in ["committer", "author"]:
-            for r in self._find("%s:%s" % (qualifier, username)):
+            for r in self._find_secrets("%s:%s" % (qualifier, username)):
                 yield r
 
     def find_by_name(self, name):
         for qualifier in ["committer-name", "author-name"]:
-            for r in self._find("%s:\"%s\"" % (qualifier, name)):
+            for r in self._find_secrets("%s:\"%s\"" % (qualifier, name)):
                 yield r
 
     def find_by_email(self, email):
         for qualifier in ["committer-email", "author-email"]:
-            for r in self._find("%s:%s" % (qualifier, email)):
+            for r in self._find_secrets("%s:%s" % (qualifier, email)):
                 yield r
 
-    def _find(self, query):
+    def _find_secrets(self, query):
         logging.info("Query: %s" % query)
+
+        if self._cache_only:
+            return self._find_secrets_from_cache(query)
+        else:
+            return self._find_secrets_from_github(query)
+
+    def _find_secrets_from_cache(self, query):
+        commits = set(commit for commit, url, html_url in self._search.get_commits_from_cache(query))
+        for result in self._findings_db.values():
+            if result["commit"] in commits:
+                yield result
+
+    def _find_secrets_from_github(self, query):
         for commit, url, html_url in self._search.search_commits(query):
             if commit in self._commits_db:
                 continue
@@ -53,7 +67,7 @@ class SecretFinder(object):
             logging.info(html_url)
 
             for secret in self._patch_analyzer.find_secrets(patch):
-                result = {"url": url, "html_url": html_url, "secret": secret}
+                result = {"url": url, "html_url": html_url, "secret": secret, "commit": commit}
                 yield result
                 self._findings_db[str(uuid.uuid4())] = result
 

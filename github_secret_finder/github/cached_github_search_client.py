@@ -12,11 +12,7 @@ class CachedGithubSearchClient(object):
     def search_commits(self, query):
         existing_commits = {}
 
-        h = hashlib.sha1()
-        h.update(query.encode("utf-8"))
-        table_name = "%s_%s" % (self._db_table_prefix, h.hexdigest())
-
-        with SqliteDict(self._db_file, tablename=table_name) as db:
+        with self._get_db(query) as db:
             for commit, x in db.iteritems():
                 existing_commits[commit] = x
 
@@ -32,5 +28,18 @@ class CachedGithubSearchClient(object):
             for commit, x in existing_commits.items():
                 url, html_url = x
                 yield commit, url, html_url
+
+    def get_commits_from_cache(self, query):
+        with self._get_db(query) as db:
+            for commit, x in db.iteritems():
+                url, html_url = x
+                yield commit, url, html_url
+
+    def _get_db(self, query):
+        h = hashlib.sha1()
+        h.update(query.encode("utf-8"))
+        table_name = "%s_%s" % (self._db_table_prefix, h.hexdigest())
+        return SqliteDict(self._db_file, tablename=table_name)
+
 
 
