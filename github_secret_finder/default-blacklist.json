@@ -1,0 +1,63 @@
+[
+  {
+    "secret": "^\"\"(\\);)?$"
+  },
+  {
+    "file": ".*\\.ps1$",
+    "secret": "^(get-content|convertto-securestring)$"
+  },
+  {
+    "file": "node_modules/.*package\\.json$"
+  },
+  {
+    "file": "\\.css$"
+  },
+  {
+    "file": "\\.scss$"
+  },
+  {
+    "file": "\\.less$"
+  },
+  {
+    "file": "\\.dll.manifest$"
+  },
+  {
+    "file": "file_sigs\\.json$"
+  },
+  {
+    "file": "\\.idea/misc\\.xml$",
+    "code": "IDEtalkID"
+  },
+  {
+    "file": "\\.vsto",
+    "code": "assemblyIdentity"
+  },
+  {
+    "file": "\\.csproj",
+    "code": "PublishedHash"
+  },
+  {
+    "file": "\\.bower\\.json",
+    "code": "commit"
+  },
+  {
+    "file": "\\.xcscheme",
+    "code": "BlueprintIdentifier"
+  },
+  {
+    "file": "Web\\.config",
+    "code": "PublicKeyToken"
+  },
+  {
+    "file": "project\\.lock\\.json",
+    "code": "sha512"
+  },
+  {
+    "file": "\\.apm/.*package.json",
+    "code": "_shasum"
+  },
+  {
+    "file": "\\.json",
+    "code": "(gitHead|shasum)"
+  }
+]

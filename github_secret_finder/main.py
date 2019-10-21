@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 from secret_finder import SecretFinder
 from scheduling import QueryScheduler
-
 
 def create_list_from_args(file_name, single_value = None):
     if single_value:
@@ -17,7 +17,7 @@ def create_list_from_args(file_name, single_value = None):
 
 
 def print_result(result):
-    url = result["url"]
+    url = result["html_url"]
     secret = result["secret"]
 
     s = ""
@@ -28,6 +28,9 @@ def print_result(result):
 
 
 def main():
+    directory = os.path.dirname(os.path.realpath(__file__))
+    default_blacklist = os.path.join(directory, "default-blacklist.json")
+
     parser = argparse.ArgumentParser(description='Github Secret Finder')
     parser.add_argument('--users', '-U', action='store', dest='users', help='File containing Github users to monitor.')
     parser.add_argument('--user', '-u', action="store", dest='user', help="Single Github user to monitor.")
@@ -38,8 +41,7 @@ def main():
 
     parser.add_argument('--tokens', '-t', action="store", dest='tokens', help="Github tokens separated by a comma (,)", required=True)
 
-    parser.add_argument('--blacklist', '-b', action="append", dest='blacklist', nargs='+', default=[], help='Regexes to blacklist file names.')
-    parser.add_argument('--blacklists', '-B', action='store', dest='blacklists', help='File containing regexes to blacklist file names.')
+    parser.add_argument('--blacklist', '-B', action='store', dest='blacklist_file', default=default_blacklist, help='File containing regexes to blacklist file names. Defaults to default-blacklist.json')
 
     parser.add_argument('--verbose', '-V', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
     args = parser.parse_args()
@@ -50,11 +52,8 @@ def main():
 
     tokens = [t.strip() for t in args.tokens.split(",")]
 
-    blacklists = create_list_from_args(args.blacklists)
-    blacklists.extend(b[0] for b in args.blacklist)
-
     database_file_name = "./github-secret-finder.sqlite"
-    with SecretFinder(tokens, database_file_name, blacklists, verbose=args.verbose) as finder:
+    with SecretFinder(tokens, database_file_name, args.blacklist_file, verbose=args.verbose) as finder:
         scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, print_result, database_file_name)
         scheduler.execute(users, emails, names)
 

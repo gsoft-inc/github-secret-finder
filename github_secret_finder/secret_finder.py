@@ -2,16 +2,15 @@ import uuid
 from analysis import PatchAnalyzer
 from github import GithubApiClient, CachedGithubSearchClient, GithubSearchClient
 from sqlitedict import SqliteDict
-import re
 
 
 class SecretFinder(object):
-    def __init__(self, tokens, db_file, blacklist, verbose):
+    def __init__(self, tokens, db_file, blacklist_file, verbose):
         self._verbose = verbose
-        self._blacklist = blacklist
         self._db_file = db_file
         self._search = CachedGithubSearchClient(GithubSearchClient(tokens), db_file, "queries")
         self._api = GithubApiClient(tokens)
+        self._patch_analyzer = PatchAnalyzer(blacklist_file)
 
     def __enter__(self):
         if not hasattr(self, '_commits_db') or self._commits_db is None:
@@ -44,18 +43,15 @@ class SecretFinder(object):
     def _find(self, query):
         if self._verbose:
             print("Query: %s" % query)
-        for commit, url in self._search.search_commits(query):
+        for commit, url, html_url in self._search.search_commits(query):
             if commit in self._commits_db:
                 continue
 
             if self._verbose:
-                print(url)
+                print(html_url)
             patch = self._api.get_commit_patch(url)
-            for secret in PatchAnalyzer().find_secrets(patch):
-                if any(b for b in self._blacklist if re.match(b, secret.file_name)):
-                    continue
-
-                result = {"url": url, "secret": secret}
+            for secret in self._patch_analyzer.find_secrets(patch):
+                result = {"url": url, "html_url": html_url, "secret": secret}
                 yield result
                 self._findings_db[str(uuid.uuid4())] = result
 

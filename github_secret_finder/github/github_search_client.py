@@ -7,8 +7,5 @@ class GithubSearchClient(object):
 
     def search_commits(self, query):
         for item in self._requester.paginated_get("https://api.github.com/search/commits?sort=committer-date&order=desc&q=" + query.replace(" ", "+")):
-            url = item["commit"]["url"].replace("/git/commits", "/commits")
-            commit_id = item["sha"]
-
-            yield commit_id, url
+            yield item["sha"], item["url"], item["html_url"]
 

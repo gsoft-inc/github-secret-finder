@@ -2,11 +2,13 @@ from detect_secrets.core.constants import VerifiedResult
 from detect_secrets.core.usage import PluginOptions
 from detect_secrets.plugins.common import initialize
 from unidiff import PatchSet, UnidiffParseError
+
+from .blacklist_matcher import BlacklistMatcher
 from .Secret import Secret
 
 
 class PatchAnalyzer(object):
-    def __init__(self):
+    def __init__(self, blacklist_file):
         active_plugins = {}
         for plugin in PluginOptions.all_plugins:
             related_args = {}
@@ -22,6 +24,8 @@ class PatchAnalyzer(object):
             automaton=False,
             should_verify_secrets=True)
 
+        self._blacklist = BlacklistMatcher(blacklist_file)
+
     def find_secrets(self, patch_text):
         try:
             patch = PatchSet.from_string(patch_text)
@@ -35,4 +39,7 @@ class PatchAnalyzer(object):
                         if line.is_added:
                             l = line.value.strip()
                             for k in p.analyze_string(l, line.target_line_no, patch_file.path):
+                                if self._blacklist.is_blacklisted(l, k.filename, k.secret_value):
+                                    continue
+
                                 yield Secret(k.type, k.filename, k.lineno, k.secret_value, p.verify(k.secret_value, content=l) == VerifiedResult.VERIFIED_TRUE)
