@@ -2,9 +2,7 @@ import operator
 import requests
 import time
 from datetime import datetime
-
 from requests import RequestException
-
 from .github_token_rate_limit_information import GithubTokenRateLimitInformation
 import logging
 
@@ -51,28 +49,16 @@ class GithubRateLimitedRequester(object):
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
-    def paginated_get(self, url):
+    def paginated_get(self, url, items_selector):
         while True:
             response = self.get(url)
             if not response:
                 break
 
-            for item in response.json()["items"]:
+            for item in items_selector(response.json()):
                 yield item
 
-            links = self.parse_link_headers(response.headers)
-            if "next" in links:
-                url = links["next"]
+            if "next" in response.links:
+                url = response.links["next"]["url"]
             else:
                 break
-
-    @staticmethod
-    def parse_link_headers(headers):
-        links = {}
-        if "link" in headers:
-            for linkHeader in headers["link"].split(", "):
-                (url, rel) = linkHeader.split("; ")
-                url = url[1:-1]
-                rel = rel[5:-1]
-                links[rel] = url
-        return links

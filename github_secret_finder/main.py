@@ -19,13 +19,11 @@ def create_list_from_args(file_name, single_value = None):
 
 
 def print_result(result):
-    url = result["html_url"]
-    secret = result["secret"]
-
     s = ""
+    secret = result.secret
     if secret.verified:
         s += "[VERIFIED] "
-    s += "%s - %s" % (url, str(secret))
+    s += "%s - %s" % (result.commit.html_url, str(secret))
     print(s)
 
 
@@ -40,6 +38,8 @@ def main():
     parser.add_argument('--email', '-e', action="store", dest='email', help="Single email address to monitor.")
     parser.add_argument('--names', '-N', action='store', dest='names', help='File containing full names to monitor.')
     parser.add_argument('--name', '-n', action="store", dest='name', help="Single full name to monitor.")
+    parser.add_argument('--organizations', '-O', action='store', dest='organizations', help='File containing organizations to monitor.')
+    parser.add_argument('--organization', '-o', action="store", dest='organization', help="Single organization to monitor.")
     parser.add_argument('--tokens', '-t', action="store", dest='tokens', help="Github tokens separated by a comma (,)", required=True)
     parser.add_argument('--blacklist', '-B', action='store', dest='blacklist_file', default=default_blacklist, help='File containing regexes to blacklist file names. Defaults to default-blacklist.json')
     parser.add_argument('--verbose', '-V', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
@@ -54,13 +54,14 @@ def main():
     emails = create_list_from_args(args.emails, args.email)
     names = create_list_from_args(args.names, args.name)
     users = create_list_from_args(args.users, args.user)
+    organizations = create_list_from_args(args.organizations, args.organization)
 
     tokens = [t.strip() for t in args.tokens.split(",")]
 
     database_file_name = "./github-secret-finder.sqlite"
     with SecretFinder(tokens, database_file_name, args.blacklist_file, args.cache_only) as finder:
-        scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, print_result, database_file_name, args.cache_only)
-        scheduler.execute(users, emails, names)
+        scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, finder.find_by_organization, print_result, database_file_name, args.cache_only)
+        scheduler.execute(users, emails, names, organizations)
 
 
 if __name__ == "__main__":
