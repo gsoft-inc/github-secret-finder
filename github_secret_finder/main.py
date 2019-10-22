@@ -39,6 +39,7 @@ def create_slack_finding_sender(args, db_file):
 def main():
     directory = os.path.dirname(os.path.realpath(__file__))
     default_blacklist = os.path.join(directory, "default-blacklist.json")
+    database_file_name = os.path.join(directory, "github-secret-finder.sqlite")
 
     parser = argparse.ArgumentParser(description='Github Secret Finder')
     parser.add_argument('--users', '-U', action='store', dest='users', help='File containing Github users to monitor.')
@@ -68,7 +69,6 @@ def main():
 
     tokens = [t.strip() for t in args.tokens.split(",")]
 
-    database_file_name = "./github-secret-finder.sqlite"
     with create_slack_finding_sender(args, database_file_name):
         with SecretFinder(tokens, database_file_name, args.blacklist_file, args.cache_only) as finder:
             scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, finder.find_by_organization, print_result, database_file_name, args.cache_only)
