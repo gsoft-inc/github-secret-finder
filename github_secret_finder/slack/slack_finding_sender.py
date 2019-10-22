@@ -7,7 +7,7 @@ import itertools
 
 
 class SlackFindingSender(object):
-    min_time_between_messages = 1 * 60
+    min_time_between_messages = 10 * 60
 
     def __init__(self, slack_webhook, db_file):
         self._db_file = db_file
