@@ -1,5 +1,4 @@
-from collections import Iterable
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 from .models import GithubRepository, GithubCommit, GithubUser
 from .github_rate_limited_requester import GithubRateLimitedRequester
 
@@ -34,15 +33,15 @@ class GithubApiClient(object):
 
         return content
 
-    def get_organization_repositories(self, organization) -> 'Optional[Iterable[GithubRepository]]':
+    def get_organization_repositories(self, organization) -> Optional[Iterable[GithubRepository]]:
         for repo in self._requester.paginated_get("https://api.github.com/orgs/%s/repos" % organization, lambda x: x):
             yield GithubRepository(repo["id"], repo["full_name"], repo["commits_url"].replace("{/sha}", ""), repo["contributors_url"])
 
-    def get_repository_commits(self, commits_url) -> 'Iterable[GithubCommit]':
+    def get_repository_commits(self, commits_url) -> Iterable[GithubCommit]:
         for item in self._requester.paginated_get(commits_url, lambda x: x):
             yield GithubCommit(item["sha"], item["url"], item["html_url"])
 
-    def get_repository_contributors(self, contributors_url) -> 'Iterable[Union[GithubUser, int]]':
+    def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
         for contributor in self._requester.paginated_get(contributors_url, lambda x: x):
             response = self._requester.get(contributor["url"])
             if response is None:

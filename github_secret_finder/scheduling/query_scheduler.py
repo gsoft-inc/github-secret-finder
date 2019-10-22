@@ -1,5 +1,6 @@
 import operator
-from collections import Iterable
+from typing import Iterable
+
 from sqlitedict import SqliteDict
 from .query_scheduler_operation import QuerySchedulerOperation
 from datetime import datetime
@@ -50,7 +51,7 @@ class QueryScheduler(object):
                     db[operation.key] = operation
 
     @staticmethod
-    def _get_operations(db, users, emails, names, organizations) -> 'Iterable[QuerySchedulerOperation]':
+    def _get_operations(db, users, emails, names, organizations) -> Iterable[QuerySchedulerOperation]:
         operations = {}
         for query_type, items in [(QueryScheduler.USER_QUERY_TYPE, users),
                                   (QueryScheduler.EMAIL_QUERY_TYPE, emails),

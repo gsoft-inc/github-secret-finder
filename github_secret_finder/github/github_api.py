@@ -1,4 +1,5 @@
-from collections import Iterable
+from typing import Iterable
+
 from sqlitedict import SqliteDict
 from .models import GithubCommit, GithubRepository
 from .github_api_client import GithubApiClient
@@ -16,10 +17,10 @@ class GithubApi(object):
         self._db_file = db_file
         self._search_client = search_client
 
-    def search_commits(self, query) -> 'Iterable[GithubCommit]':
+    def search_commits(self, query) -> Iterable[GithubCommit]:
         return self._get_commits(query, lambda: self._search_client.search_commits(query))
 
-    def get_organization_commits(self, organization) -> 'Iterable[GithubCommit]':
+    def get_organization_commits(self, organization) -> Iterable[GithubCommit]:
         for repo in self.get_organization_repositories(organization):
             for commit in self._get_commits(repo.commits_url, lambda: self._api_client.get_repository_commits(repo.commits_url)):
                 yield commit
@@ -27,7 +28,7 @@ class GithubApi(object):
     def get_commit_patch(self, url) -> str:
         return self._api_client.get_commit_patch(url)
 
-    def get_organization_repositories(self, organization) -> 'Iterable[GithubRepository]':
+    def get_organization_repositories(self, organization) -> Iterable[GithubRepository]:
         with self._get_db(self._repos_table_prefix, organization) as db:
             if not self._cache_only:
                 for repo in self._api_client.get_organization_repositories(organization):
@@ -48,7 +49,7 @@ class GithubApi(object):
             for commit in db.itervalues():
                 yield commit
 
-    def _get_new_and_cached_commits(self, db_key, new_commit_source) -> 'Iterable[GithubCommit]':
+    def _get_new_and_cached_commits(self, db_key, new_commit_source) -> Iterable[GithubCommit]:
         existing_commits = {}
 
         with self._get_db(self._commits_table_prefix, db_key) as db:
