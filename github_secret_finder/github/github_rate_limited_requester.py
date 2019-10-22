@@ -37,10 +37,10 @@ class GithubRateLimitedRequester(object):
             if retry >= self._max_retries:
                 logging.error("Could not get %s. Skipping." % url)
                 return None
-            if all(t for t in self._token_infos if t.remaining == 0):
+            if all(t.remaining == 0 for t in self._token_infos):
                 # Assume the calls failed because of a timeout.
                 sleep_time = (min([t.reset_time for t in self._token_infos]) - datetime.utcnow()).total_seconds() + 1
-                logging.warning("Rate limiting error. Sleeping %d seconds." % sleep_time)
+                logging.warning("Rate limit reached. Sleeping %d seconds." % sleep_time)
             else:
                 sleep_time = retry * 5
                 logging.error("Unhandled error. Retrying in %d seconds." % sleep_time)
