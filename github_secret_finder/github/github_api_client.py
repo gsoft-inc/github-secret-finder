@@ -1,5 +1,5 @@
 from collections import Iterable
-from typing import Optional
+from typing import Optional, Union
 from .models import GithubRepository, GithubCommit, GithubUser
 from .github_rate_limited_requester import GithubRateLimitedRequester
 
@@ -42,10 +42,10 @@ class GithubApiClient(object):
         for item in self._requester.paginated_get(commits_url, lambda x: x):
             yield GithubCommit(item["sha"], item["url"], item["html_url"])
 
-    def get_repository_contributors(self, contributors_url) -> 'Iterable[GithubUser]':
+    def get_repository_contributors(self, contributors_url) -> 'Iterable[Union[GithubUser, int]]':
         for contributor in self._requester.paginated_get(contributors_url, lambda x: x):
             response = self._requester.get(contributor["url"])
             if response is None:
                 continue
             json_response = response.json()
-            yield GithubUser(json_response["login"], json_response["name"], json_response["url"], json_response["repos_url"])
+            yield GithubUser(json_response["login"], json_response["name"], json_response["url"], json_response["repos_url"]), contributor["contributions"]

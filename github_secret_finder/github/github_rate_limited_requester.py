@@ -49,13 +49,17 @@ class GithubRateLimitedRequester(object):
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
-    def paginated_get(self, url, items_selector):
+    def paginated_get(self, url, items_selector, max_results=-1):
         while True:
             response = self.get(url)
             if not response:
                 break
 
-            for item in items_selector(response.json()):
+            json_response = response.json()
+            if max_results != -1 and json_response["total_count"] > max_results:
+                break
+
+            for item in items_selector(json_response):
                 yield item
 
             if "next" in response.links:
