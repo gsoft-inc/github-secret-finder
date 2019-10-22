@@ -51,10 +51,10 @@ def main():
     parser.add_argument('--organization', '-o', action="store", dest='organization', help="Single organization to monitor.")
     parser.add_argument('--tokens', '-t', action="store", dest='tokens', help="Github tokens separated by a comma (,)", required=True)
     parser.add_argument('--blacklist', '-B', action='store', dest='blacklist_file', default=default_blacklist, help='File containing regexes to blacklist file names. Defaults to default-blacklist.json')
-    parser.add_argument('--verbose', '-V', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
-    parser.add_argument('--results', '-r', action="store_true", dest='cache_only', default=False, help="Shows the previously found results.")
-
     parser.add_argument('--slack-webhook', '-w', action="store", dest='slack_webhook', default=None, help="Slack webhook to send messages when secrets are found.")
+    parser.add_argument('--results', '-r', action="store_true", dest='cache_only', default=False, help="Shows the previously found results.")
+    parser.add_argument('--verbose', '-v', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
+
     args = parser.parse_args()
 
     if args.verbose:
