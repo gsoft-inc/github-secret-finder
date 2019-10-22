@@ -30,7 +30,7 @@ class GithubApi(object):
     def get_organization_repositories(self, organization) -> 'Iterable[GithubRepository]':
         with self._get_db(self._repos_table_prefix, organization) as db:
             if not self._cache_only:
-                for repo in self._api_client.get_repositories(organization):
+                for repo in self._api_client.get_organization_repositories(organization):
                     db[repo.id] = repo
                 db.commit()
 
