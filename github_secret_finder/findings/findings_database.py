@@ -1,4 +1,3 @@
-import uuid
 from typing import Iterable
 from sqlitedict import SqliteDict
 from findings.finding import Finding
@@ -16,6 +15,12 @@ class FindingsDatabase(object):
             if finding_filter(result):
                 yield result
 
-    def add(self, finding):
-        self._findings_db[str(uuid.uuid4())] = finding
+    def create(self, commit, secret):
+        finding = Finding(commit, secret)
+        self._findings_db[finding.id] = finding
+        return finding
+
+    def update(self, finding):
+        self._findings_db[finding.id] = finding
+
 

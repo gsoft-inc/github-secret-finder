@@ -5,6 +5,8 @@ import os
 from secret_finder import SecretFinder
 from scheduling import QueryScheduler
 import logging
+from slack import SlackFindingSender
+from contextlib import contextmanager
 
 
 def create_list_from_args(file_name, single_value = None):
@@ -27,6 +29,13 @@ def print_result(result):
     print(s)
 
 
+def create_slack_finding_sender(args, db_file):
+    if args.slack_webhook:
+        return SlackFindingSender(args.slack_webhook, db_file)
+    else:
+        return contextmanager(lambda: iter([None]))()
+
+
 def main():
     directory = os.path.dirname(os.path.realpath(__file__))
     default_blacklist = os.path.join(directory, "default-blacklist.json")
@@ -45,6 +54,7 @@ def main():
     parser.add_argument('--verbose', '-V', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
     parser.add_argument('--results', '-r', action="store_true", dest='cache_only', default=False, help="Shows the previously found results.")
 
+    parser.add_argument('--slack-webhook', '-w', action="store", dest='slack_webhook', default=None, help="Slack webhook to send messages when secrets are found.")
     args = parser.parse_args()
 
     if args.verbose:
@@ -59,9 +69,10 @@ def main():
     tokens = [t.strip() for t in args.tokens.split(",")]
 
     database_file_name = "./github-secret-finder.sqlite"
-    with SecretFinder(tokens, database_file_name, args.blacklist_file, args.cache_only) as finder:
-        scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, finder.find_by_organization, print_result, database_file_name, args.cache_only)
-        scheduler.execute(users, emails, names, organizations)
+    with create_slack_finding_sender(args, database_file_name):
+        with SecretFinder(tokens, database_file_name, args.blacklist_file, args.cache_only) as finder:
+            scheduler = QueryScheduler(finder.find_by_username, finder.find_by_email, finder.find_by_name, finder.find_by_organization, print_result, database_file_name, args.cache_only)
+            scheduler.execute(users, emails, names, organizations)
 
 
 if __name__ == "__main__":

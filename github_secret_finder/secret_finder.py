@@ -72,9 +72,7 @@ class SecretFinder(object):
             logging.info(commit.html_url)
 
             for secret in self._patch_analyzer.find_secrets(patch):
-                finding = Finding(commit, secret)
-                yield finding
-                self._findings_db.add(finding)
+                yield self._findings_db.create(commit, secret)
 
             self._commits_db[commit.id] = None
 

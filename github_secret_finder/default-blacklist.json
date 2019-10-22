@@ -92,5 +92,8 @@
   {
     "file": "(?i)Cargo.lock",
     "code": "checksum"
+  },
+  {
+    "file": "\\.graphql"
   }
 ]
