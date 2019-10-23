@@ -1,6 +1,7 @@
 from typing import Iterable
 from .models import GithubCommit
 from .github_rate_limited_requester import GithubRateLimitedRequester
+import logging
 
 
 class GithubSearchClient(object):
@@ -11,26 +12,52 @@ class GithubSearchClient(object):
         for item in self._query_commits(query):
             yield GithubCommit(item["sha"], item["url"], item["html_url"])
 
-    def search_commit_emails_by_username(self, username):
-        return self._search_commit_emails(username, "")
+    def search_other_emails_and_names_by_login(self, login):
+        emails, names, logins = self._search_for_other_emails_names_and_logins(login, "")
+        return emails, names
 
-    def search_commit_emails_by_full_name(self, name):
+    def search_other_emails_and_logins_by_name(self, name):
         # If the query returns more than 5000 results, assume that it's too generic and don't return anything.
-        return self._search_commit_emails(name, "-name", 5000)
+        emails, names, logins = self._search_for_other_emails_names_and_logins(name, "-name", 5000)
+        return emails, logins
 
-    def _search_commit_emails(self, value, query_suffix, max_results=-1):
+    def search_other_names_and_logins_by_email(self, email):
+        emails, names, logins = self._search_for_other_emails_names_and_logins(email, "-email")
+        return names, logins
+
+    def _search_for_other_emails_names_and_logins(self, value, query_suffix, max_results=-1):
         emails = {}
-        for query_type in ["author", "committer"]:
-            for item in self._query_commits("%s%s:\"%s\"" % (query_type, query_suffix, value), max_results):
-                email = item["commit"][query_type]["email"].lower()
-                if "@" not in email or email.endswith("@users.noreply.github.com") or email.endswith("github.com"):
-                    continue
+        names = {}
+        logins = {}
 
-                if email not in emails:
-                    emails[email] = 1
-                else:
-                    emails[email] += 1
-        return emails
+        for query_type in ["author", "committer"]:
+            query = "%s%s:\"%s\"" % (query_type, query_suffix, value)
+            logging.info(query)
+            for item in self._query_commits(query, max_results):
+                infos = item["commit"][query_type]
+                email = infos["email"].lower()
+                if "@" in email and not email.endswith("@users.noreply.github.com") and not email.endswith("@github.com"):
+                    self._update_counts(emails, email)
+
+                name = infos["name"].lower()
+                if name and name != "unknown":
+                    self._update_counts(names, name)
+
+                login_info = item[query_type]
+                if login_info:
+                    self._update_counts(logins, login_info["login"].lower())
+
+        return emails, names, logins
 
     def _query_commits(self, query, max_results=-1):
         return self._requester.paginated_get("https://api.github.com/search/commits?sort=committer-date&order=desc&q=" + query.replace(" ", "+"), lambda x: x["items"], max_results)
+
+    @staticmethod
+    def _update_counts(counts_dict, key):
+        if not key:
+            return
+
+        if key not in counts_dict:
+            counts_dict[key] = 1
+        else:
+            counts_dict[key] += 1
