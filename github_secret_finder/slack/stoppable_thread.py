@@ -8,16 +8,16 @@ class StoppableThread(threading.Thread):
         self._action = action
         self._stop_action = stop_action
         self._sleep = sleep
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def run(self):
         while not self.stopped():
-            self._stop.wait(self._sleep)
+            self._stop_event.wait(self._sleep)
             self._action()
         self._stop_action()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
