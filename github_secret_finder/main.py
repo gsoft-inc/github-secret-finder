@@ -7,6 +7,7 @@ from scheduling import QueryScheduler
 import logging
 from slack import SlackFindingSender
 from contextlib import contextmanager
+import shutil
 
 
 def create_list_from_args(file_name, single_value = None):
@@ -21,16 +22,16 @@ def create_list_from_args(file_name, single_value = None):
 
 
 def print_result(result):
-    s = ""
-    secret = result.secret
-    if secret.verified:
-        s += "[VERIFIED] "
-    s += "%s - %s" % (result.commit.html_url, str(secret))
-    print(s)
+    width = shutil.get_terminal_size((80, 20)).columns
+    prefix = result.commit.html_url + " - "
+    secret_width = width - len(prefix)
+    if secret_width < 20:
+        secret_width = 20
+    print("%s%s" % (prefix, result.secret.to_terminal_string(secret_width)))
 
 
 def create_slack_finding_sender(args, db_file):
-    if args.slack_webhook:
+    if not args.cache_only and args.slack_webhook:
         return SlackFindingSender(args.slack_webhook, db_file)
     else:
         return contextmanager(lambda: iter([None]))()

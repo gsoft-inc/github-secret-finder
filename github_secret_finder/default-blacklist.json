@@ -95,5 +95,15 @@
   },
   {
     "file": "\\.graphql"
+  },
+  {
+    "file": "package-lock\\.json"
+  },
+  {
+    "file": "(?i)(Base64||base64binary)(\\.min)?\\.js"
+  },
+  {
+    "file": "npm-debug.log",
+    "code": "(addRemoteTarball|shasum)"
   }
 ]
