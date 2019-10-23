@@ -50,7 +50,6 @@ class SlackFindingSender(object):
 
     def _findings_to_messages(self, findings: Iterable[Finding]):
         message = ""
-        secret_formatter = " _*"
 
         for findings_by_commit in [list(f) for c, f in itertools.groupby(findings, lambda f: f.commit.id)]:
             commit = findings_by_commit[0].commit
@@ -63,17 +62,6 @@ class SlackFindingSender(object):
                 file_header_added = False
 
                 for secret in secrets:
-                    line = secret.line.replace(secret.value, secret_formatter + secret.value + secret_formatter[::-1])
-                    if len(line) > 100:
-                        secret_index = line.find(secret.value)
-                        if secret_index > 50:
-                            line = "..." + line[secret_index - 50:]
-                        if len(line) > 100:
-                            line = line[:100] + "..."
-
-                        if secret.value not in line:
-                            line += secret_formatter[::-1]  # The secret was truncated.
-
                     if not commit_header_added:
                         message += commit_header
                         commit_header_added = True
@@ -82,7 +70,7 @@ class SlackFindingSender(object):
                         message += file_header
                         file_header_added = True
 
-                    message += "> • %s: %s\n" % (secret.secret_type, line)
+                    message += "> • %s: %s\n" % (secret.secret_type, secret.to_slack_string())
                     if len(message) > self.max_ish_message_length:
                         yield message
                         message = ""
@@ -90,4 +78,3 @@ class SlackFindingSender(object):
                         file_header_added = False
 
         yield message
-
