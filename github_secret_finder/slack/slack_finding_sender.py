@@ -18,13 +18,15 @@ class SlackFindingSender(object):
             self._findings_db = FindingsDatabase(self._db_file)
 
         if not hasattr(self, '_thread') or self._thread is None:
-            self._thread = StoppableThread(self._send_new_findings, self.min_time_between_messages)
+            self._thread = StoppableThread(self._send_new_findings, self._on_stop, self.min_time_between_messages)
             self._thread.start()
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._thread.stop()
+
+    def _on_stop(self):
         self._findings_db.close()
 
     def _send_new_findings(self):
