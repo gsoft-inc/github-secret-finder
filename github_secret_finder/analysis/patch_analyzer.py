@@ -39,7 +39,14 @@ class PatchAnalyzer(object):
                         if line.is_added:
                             l = line.value.strip()
                             for k in p.analyze_string(l, line.target_line_no, patch_file.path):
+                                if len(k.secret_value) < 6:
+                                    continue  # Ignore small secrets to reduce false positives.
+
                                 if self._blacklist.is_blacklisted(l, k.filename, k.secret_value):
                                     continue
 
-                                yield Secret(k.type, k.filename, k.lineno, k.secret_value, p.verify(k.secret_value, content=l) == VerifiedResult.VERIFIED_TRUE)
+                                # detect_secrets sometimes return a lowercase version of the secret. Find the real string.
+                                secret_index = l.lower().find(k.secret_value.lower())
+                                secret_value = l[secret_index:secret_index + len(k.secret_value)]
+
+                                yield Secret(k.type, k.filename, k.lineno, secret_value, l, p.verify(secret_value, content=l) == VerifiedResult.VERIFIED_TRUE)
