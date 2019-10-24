@@ -22,7 +22,7 @@ class GithubApi(object):
 
     def get_organization_commits(self, organization) -> Iterable[GithubCommit]:
         for repo in self.get_organization_repositories(organization):
-            for commit in self._get_commits(repo.commits_url, lambda: self._api_client.get_repository_commits(repo.commits_url)):
+            for commit in self._get_commits(repo.commits_url, lambda: self._api_client.get_repository_commits(repo)):
                 yield commit
 
     def get_commit_patch(self, url) -> str:

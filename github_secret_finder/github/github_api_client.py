@@ -37,8 +37,8 @@ class GithubApiClient(object):
         for repo in self._requester.paginated_get("https://api.github.com/orgs/%s/repos" % organization, lambda x: x):
             yield GithubRepository(repo["id"], repo["full_name"], repo["commits_url"].replace("{/sha}", ""), repo["contributors_url"])
 
-    def get_repository_commits(self, commits_url) -> Iterable[GithubCommit]:
-        for item in self._requester.paginated_get(commits_url, lambda x: x):
+    def get_repository_commits(self, repo: GithubRepository) -> Iterable[GithubCommit]:
+        for item in self._requester.paginated_get(repo.commits_url + "?per_page=100", lambda x: x):
             yield GithubCommit(item["sha"], item["url"], item["html_url"])
 
     def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
