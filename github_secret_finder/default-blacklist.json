@@ -72,7 +72,7 @@
     "code": "(gitHead|shasum)"
   },
   {
-    "file": "\\.deps\\.json",
+    "file": "\\.deps\\.json$",
     "code": "signature"
   },
   {
@@ -84,26 +84,25 @@
     "code": "sha256"
   },
   {
-    "file": "csproj\\.nuget\\.cache"
+    "file": "csproj\\.nuget\\.cache$"
   },
   {
-    "file": "\\.import/.*\\.md5"
+    "file": "\\.import/.*\\.md5$"
   },
   {
-    "file": "(?i)Cargo.lock",
-    "code": "checksum"
+    "file": "\\.lock$"
   },
   {
-    "file": "\\.graphql"
+    "file": "\\.graphql$"
   },
   {
-    "file": "package-lock\\.json"
+    "file": "package-lock\\.json$"
   },
   {
-    "file": "(?i)(Base64||base64binary)(\\.min)?\\.js"
+    "file": "(?i)(Base64||base64binary)(\\.min)?\\.js$"
   },
   {
-    "file": "npm-debug.log",
+    "file": "npm-debug.log$",
     "code": "(addRemoteTarball|shasum)"
   }
 ]
