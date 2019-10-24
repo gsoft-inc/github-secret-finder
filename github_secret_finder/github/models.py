@@ -1,9 +1,18 @@
 class GithubRepository(object):
-    def __init__(self, repo_id, name, commits_url, contributors_url):
+    def __init__(self, repo_id, name, commits_url, branches_url, contributors_url, is_fork):
         self.contributors_url = contributors_url
+        self.branches_url = branches_url
         self.commits_url = commits_url
         self.name = name
         self.id = repo_id
+        self.is_fork = is_fork
+
+
+class GithubBranch(object):
+    def __init__(self, name, sha, commits_url):
+        self.sha = sha
+        self.name = name
+        self.commits_url = commits_url
 
 
 class GithubCommit(object):

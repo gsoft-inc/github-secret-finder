@@ -8,7 +8,8 @@ import logging
 
 
 class SecretFinder(object):
-    def __init__(self, tokens, db_file, blacklist_file, cache_only):
+    def __init__(self, tokens, db_file, blacklist_file, cache_only, ignore_forks):
+        self._ignore_forks = ignore_forks
         self._cache_only = cache_only
         self._db_file = db_file
         self._api = GithubApi(GithubApiClient(tokens), GithubSearchClient(tokens), db_file, cache_only)
@@ -44,7 +45,7 @@ class SecretFinder(object):
 
     def find_by_organization(self, organization) -> Iterable[Finding]:
         logging.info("Organization: %s" % organization)
-        return self._find_secrets(self._api.get_organization_commits(organization))
+        return self._find_secrets(self._api.get_organization_commits(organization, self._ignore_forks))
 
     def _find_by_query(self, query) -> Iterable[Finding]:
         logging.info("Query: %s" % query)
