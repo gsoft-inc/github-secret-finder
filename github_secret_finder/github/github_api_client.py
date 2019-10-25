@@ -35,32 +35,37 @@ class GithubApiClient(object):
 
     def get_organization_repositories(self, organization) -> Iterable[GithubRepository]:
         for repo in self._requester.paginated_get("https://api.github.com/orgs/%s/repos" % organization, lambda x: x):
-            yield GithubRepository(repo["id"],
-                                   repo["full_name"],
-                                   repo["commits_url"].replace("{/sha}", "") + "?per_page=100",
-                                   repo["branches_url"].replace("{/branch}", "") + "?per_page=100",
-                                   repo["contributors_url"],
-                                   repo["compare_url"],
-                                   repo["fork"])
+            if repo["fork"]:
+                response = self._requester.get(repo["url"])
+                if response:
+                    repo = response.json()
+            yield GithubRepository.from_json(repo)
+
 
     def get_repository_branches(self, repo: GithubRepository) -> Iterable[GithubBranch]:
-        for item in self._requester.paginated_get(repo.branches_url, lambda x: x):
-            sha = item["commit"]["sha"]
-            yield GithubBranch(item["name"], sha, "%s&sha=%s" % (repo.commits_url, sha))
+        for item in self._requester.paginated_get(repo.get_branches_url(), lambda x: x):
+            yield GithubBranch.from_json(item)
 
-    def get_branch_commits(self, commits_url) -> Iterable[GithubCommit]:
-        for item in self._requester.paginated_get(commits_url, lambda x: x, reverse=True):
-            yield self._parse_commit(item)
+    def get_branch_commits(self, repo: GithubRepository, branch: GithubBranch, since_commit: GithubCommit = None) -> Iterable[GithubCommit]:
+        since = None
+        if since_commit:
+            since = since_commit.date
 
-    def get_compare_commits(self, compare_url, base_commit, head_commit) -> Iterable[GithubCommit]:
-        response = self._requester.get(compare_url.replace("{head}", head_commit).replace("{base}", base_commit))
+        for item in self._requester.paginated_get(branch.get_commits_url(repo, since), lambda x: x, reverse=True):
+            commit = GithubCommit.from_json(item)
+            if since_commit and since_commit.sha == commit.sha:
+                continue
+            yield commit
+
+    def get_compare_commits(self, repo: GithubRepository, base: GithubBranch, head: GithubBranch, compare_with_parent=False) -> Iterable[GithubCommit]:
+        response = self._requester.get(repo.get_compare_url(base, head, compare_with_parent))
         if not response:
             raise StopIteration()
         json_response = response.json()
 
         # TODO Do something if there are more than 250 commits.
         for commit in json_response["commits"][::-1]:
-            yield self._parse_commit(commit)
+            yield GithubCommit.from_json(commit)
 
     def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
         for contributor in self._requester.paginated_get(contributors_url, lambda x: x):
@@ -68,8 +73,4 @@ class GithubApiClient(object):
             if response is None:
                 continue
             json_response = response.json()
-            yield GithubUser(json_response["login"], json_response["name"], json_response["url"], json_response["repos_url"]), contributor["contributions"]
-
-    @staticmethod
-    def _parse_commit(json):
-        return GithubCommit(json["sha"], json["url"], json["html_url"], json["commit"]["committer"]["date"])
+            yield GithubUser.from_json(json_response), contributor["contributions"]

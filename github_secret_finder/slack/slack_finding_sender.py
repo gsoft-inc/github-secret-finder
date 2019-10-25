@@ -51,7 +51,7 @@ class SlackFindingSender(object):
     def _findings_to_messages(self, findings: Iterable[Finding]):
         message = ""
 
-        for findings_by_commit in [list(f) for c, f in itertools.groupby(findings, lambda f: f.commit.id)]:
+        for findings_by_commit in [list(f) for c, f in itertools.groupby(findings, lambda f: f.commit.sha)]:
             commit = findings_by_commit[0].commit
             commit_header = "%s\n" % commit.html_url
             commit_header_added = False

@@ -5,6 +5,8 @@ from datetime import datetime
 from requests import RequestException
 from .github_token_rate_limit_information import GithubTokenRateLimitInformation
 import logging
+import urllib.parse as urlparse
+from urllib.parse import urlencode
 
 
 class GithubRateLimitedRequester(object):
@@ -50,12 +52,32 @@ class GithubRateLimitedRequester(object):
                 time.sleep(sleep_time)
 
     def paginated_get(self, url, items_selector, max_results=-1, reverse=False):
+        url = self._add_url_params(url, {"page": "1", "per_page": 100})
         if reverse:
             return self._paginated_get_reverse(url, items_selector, max_results)
         else:
             return self._paginated_get_normal(url, items_selector, max_results)
 
+    def _paginated_get_normal(self, url, items_selector, max_results):
+        while True:
+            response = self.get(url)
+            if not response:
+                break
+
+            json_response = response.json()
+            if max_results != -1 and json_response["total_count"] > max_results:
+                break
+
+            for item in items_selector(json_response):
+                yield item
+
+            if "next" in response.links:
+                url = response.links["next"]["url"]
+            else:
+                break
+
     def _paginated_get_reverse(self, url, items_selector, max_results):
+        first_url = url
         first_response = self.get(url)
         if not first_response:
             raise StopIteration()
@@ -63,8 +85,8 @@ class GithubRateLimitedRequester(object):
         if max_results != -1 and first_json_response["total_count"] > max_results:
             raise StopIteration()
 
-        first_url = first_response.links["first"]["url"]
-        url = first_response.links["last"]["url"]
+        if "last" in first_response.links:
+            url = first_response.links["last"]["url"]
 
         while True:
             if url != first_url:
@@ -84,20 +106,10 @@ class GithubRateLimitedRequester(object):
             else:
                 break
 
-    def _paginated_get_normal(self, url, items_selector, max_results):
-        while True:
-            response = self.get(url)
-            if not response:
-                break
-
-            json_response = response.json()
-            if max_results != -1 and json_response["total_count"] > max_results:
-                break
-
-            for item in items_selector(json_response):
-                yield item
-
-            if "next" in response.links:
-                url = response.links["next"]["url"]
-            else:
-                break
+    @staticmethod
+    def _add_url_params(url, params):
+        url_parts = list(urlparse.urlparse(url))
+        query = dict(urlparse.parse_qsl(url_parts[4]))
+        query.update(params)
+        url_parts[4] = urlencode(query)
+        return urlparse.urlunparse(url_parts)

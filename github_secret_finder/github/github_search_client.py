@@ -10,7 +10,7 @@ class GithubSearchClient(object):
 
     def search_commits(self, query) -> Iterable[GithubCommit]:
         for item in self._query_commits(query):
-            yield GithubCommit(item["sha"], item["url"], item["html_url"])
+            yield GithubCommit.from_json(item)
 
     def search_other_emails_and_names_by_login(self, login):
         emails, names, logins = self._search_for_other_emails_names_and_logins(login, "")

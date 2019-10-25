@@ -20,35 +20,32 @@ class GithubApi(object):
     def search_commits(self, query) -> Iterable[GithubCommit]:
         return self._get_commits(query, lambda: self._search_client.search_commits(query))
 
-    def get_organization_commits(self, organization, ignore_forks) -> Iterable[GithubCommit]:
-        commit_ids = set()
-
-        def get_compare_commits(compare_url, base, head):
-            for c in self._api_client.get_compare_commits(compare_url, base, head):
-                if c.id not in commit_ids:
-                    yield c
-
+    def get_organization_commits(self, organization) -> Iterable[GithubCommit]:
         for repo in self.get_organization_repositories(organization):
-            if repo.is_fork and ignore_forks:
-                continue
-
             branches = list(self.get_repository_branches(repo))
-            master = next((b for b in branches if b.name == "master"), None)
-            if master:
-                # There is a master branch. Fetch all commits from master and only compare the other branches.
-                for c in self._get_commits(master.commits_url, lambda: self._api_client.get_branch_commits(master.commits_url)):
-                    yield c
-                for branch in [b for b in branches if b != master]:
-                    for commit in self._get_commits(branch.commits_url, lambda: get_compare_commits(repo.compare_url, master.sha, branch.sha)):
-                        commit_ids.add(commit.id)
-                        yield commit
+            default_branch = [b for b in branches if b.name == repo.default_branch][0]
+
+            if not repo.is_fork or repo.parent is None:
+                # Return commits from the default branch.
+                for commit in self._get_commits(self._get_branch_cache_key(repo, default_branch), lambda since_commit: self._api_client.get_branch_commits(repo, default_branch, since_commit)):
+                    yield commit
+
+                parent_branches = branches
             else:
-                # There is no master branch. Fetch all commits from all branches.
-                for branch in branches:
-                    for c in self._get_commits(branch.commits_url, lambda: self._api_client.get_branch_commits(branch.commits_url)):
-                        if c.id not in commit_ids:
-                            commit_ids.add(c.id)
-                            yield c
+                parent_branches = list(self.get_repository_branches(repo.parent))
+
+            # For each branch, return commits that are not in the default branch.
+            for branch in branches:
+                if repo.is_fork:
+                    base_branch = next((b for b in parent_branches if b.name == branch.name), default_branch)  # Compare with the same branch if it exists. Otherwise, compare with the default branch.
+                else:
+                    if branch == default_branch:
+                        continue  # The commits for this branch were already returned.
+                    base_branch = default_branch
+
+                cache_key = self._get_branch_cache_key(repo, branch)
+                for commit in self._get_commits(cache_key, lambda x: (c for c in self._api_client.get_compare_commits(repo, base_branch, branch, compare_with_parent=repo.is_fork))):
+                    yield commit
 
     def get_commit_patch(self, url) -> str:
         return self._api_client.get_commit_patch(url)
@@ -57,14 +54,14 @@ class GithubApi(object):
         with self._get_db(self._repos_table_prefix, organization) as db:
             if not self._cache_only:
                 for repo in self._api_client.get_organization_repositories(organization):
-                    db[repo.id] = repo
+                    db[repo.name] = repo
                 db.commit()
 
             for repo in db.itervalues():
                 yield repo
 
     def get_repository_branches(self, repo: GithubRepository) -> Iterable[GithubBranch]:
-        with self._get_db(self._branches_table_prefix, repo.branches_url) as db:
+        with self._get_db(self._branches_table_prefix, repo.get_branches_url()) as db:
             if not self._cache_only:
                 for branch in self._api_client.get_repository_branches(repo):
                     db[branch.name] = branch
@@ -86,13 +83,16 @@ class GithubApi(object):
 
     def _get_new_and_cached_commits(self, db_key, new_commit_source) -> Iterable[GithubCommit]:
         with self._get_db(self._commits_table_prefix, db_key, auto_commit=True) as db:
+            since_commit = None
+
             for commit in db.itervalues():
+                since_commit = commit
                 yield commit
 
-            for commit in new_commit_source():
-                if commit.id in db:
+            for commit in new_commit_source(since_commit):
+                if commit.sha in db:
                     break
-                db[commit.id] = commit
+                db[commit.sha] = commit
                 yield commit
 
     def _get_db(self, prefix, key, auto_commit=False) -> SqliteDict:
@@ -101,5 +101,8 @@ class GithubApi(object):
         table_name = "%s_%s" % (prefix, h.hexdigest())
         return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit)
 
+    @staticmethod
+    def _get_branch_cache_key(repo: GithubRepository, branch: GithubBranch):
+        return repo.name + "/" + branch.name
 
 

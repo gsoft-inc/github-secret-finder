@@ -8,8 +8,7 @@ import logging
 
 
 class SecretFinder(object):
-    def __init__(self, tokens, db_file, blacklist_file, cache_only, ignore_forks):
-        self._ignore_forks = ignore_forks
+    def __init__(self, tokens, db_file, blacklist_file, cache_only):
         self._cache_only = cache_only
         self._db_file = db_file
         self._api = GithubApi(GithubApiClient(tokens), GithubSearchClient(tokens), db_file, cache_only)
@@ -45,7 +44,7 @@ class SecretFinder(object):
 
     def find_by_organization(self, organization) -> Iterable[Finding]:
         logging.info("Organization: %s" % organization)
-        return self._find_secrets(self._api.get_organization_commits(organization, self._ignore_forks))
+        return self._find_secrets(self._api.get_organization_commits(organization))
 
     def _find_by_query(self, query) -> Iterable[Finding]:
         logging.info("Query: %s" % query)
@@ -58,23 +57,22 @@ class SecretFinder(object):
             return self._find_secrets_from_api(commit_source)
 
     def _find_secrets_from_cache(self, commit_source) -> Iterable[Finding]:
-        commits = set(commit.id for commit in commit_source)
-        return self._findings_db.get_findings(lambda x: x.commit.id in commits)
+        commits = set(commit.sha for commit in commit_source)
+        return self._findings_db.get_findings(lambda x: x.commit.sha in commits)
 
     def _find_secrets_from_api(self, commit_source) -> Iterable[Finding]:
         for commit in commit_source:
-            if commit.id in self._commits_db:
+            print(commit)
+            if commit.sha in self._commits_db:
                 continue
 
             patch = self._api.get_commit_patch(commit.api_url)
-            if not patch:
-                continue
+            if patch:
+                logging.info(commit.html_url + " " + commit.date.isoformat())
 
-            logging.info(commit.html_url)
+                for secret in self._patch_analyzer.find_secrets(patch):
+                    yield self._findings_db.create(commit, secret)
 
-            for secret in self._patch_analyzer.find_secrets(patch):
-                yield self._findings_db.create(commit, secret)
-
-            self._commits_db[commit.id] = None
+            self._commits_db[commit.sha] = None
 
 

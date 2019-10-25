@@ -35,8 +35,6 @@ optional arguments:
                         File containing organizations to monitor.
   --organization ORGANIZATION, -o ORGANIZATION
                         Single organization to monitor.
-  --ignore-forks        Ignores the forked repositories when monitoring an
-                        organization.
   --tokens TOKENS, -t TOKENS
                         Github tokens separated by a comma (,)
   --blacklist BLACKLIST_FILE, -B BLACKLIST_FILE
