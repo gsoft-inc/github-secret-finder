@@ -23,8 +23,8 @@ class GithubApi(object):
     def get_organization_commits(self, organization, ignore_forks) -> Iterable[GithubCommit]:
         commit_ids = set()
 
-        def get_new_branch_commits(u):
-            for c in self._api_client.get_branch_commits(u):
+        def get_compare_commits(compare_url, base, head):
+            for c in self._api_client.get_compare_commits(compare_url, base, head):
                 if c.id not in commit_ids:
                     yield c
 
@@ -32,12 +32,23 @@ class GithubApi(object):
             if repo.is_fork and ignore_forks:
                 continue
 
-            branches = sorted(list(self.get_repository_branches(repo)), key=lambda b: 0 if b.name == "master" else 1)
-            for branch in branches:
-                url = branch.commits_url
-                for commit in self._get_commits(url, lambda: get_new_branch_commits(url)):
-                    commit_ids.add(commit.id)
-                    yield commit
+            branches = list(self.get_repository_branches(repo))
+            master = next((b for b in branches if b.name == "master"), None)
+            if master:
+                # There is a master branch. Fetch all commits from master and only compare the other branches.
+                for c in self._get_commits(master.commits_url, lambda: self._api_client.get_branch_commits(master.commits_url)):
+                    yield c
+                for branch in [b for b in branches if b != master]:
+                    for commit in self._get_commits(branch.commits_url, lambda: get_compare_commits(repo.compare_url, master.sha, branch.sha)):
+                        commit_ids.add(commit.id)
+                        yield commit
+            else:
+                # There is no master branch. Fetch all commits from all branches.
+                for branch in branches:
+                    for c in self._get_commits(branch.commits_url, lambda: self._api_client.get_branch_commits(branch.commits_url)):
+                        if c.id not in commit_ids:
+                            commit_ids.add(c.id)
+                            yield c
 
     def get_commit_patch(self, url) -> str:
         return self._api_client.get_commit_patch(url)
@@ -74,29 +85,21 @@ class GithubApi(object):
                 yield commit
 
     def _get_new_and_cached_commits(self, db_key, new_commit_source) -> Iterable[GithubCommit]:
-        existing_commits = {}
-
-        with self._get_db(self._commits_table_prefix, db_key) as db:
-            for commit, x in db.iteritems():
-                existing_commits[commit] = x
-
-            for commit in new_commit_source():
-                if commit.id in existing_commits:
-                    break
-
-                existing_commits[commit.id] = commit
-                db[commit.id] = commit
-
-            db.commit()
-
-            for commit in existing_commits.values():
+        with self._get_db(self._commits_table_prefix, db_key, auto_commit=True) as db:
+            for commit in db.itervalues():
                 yield commit
 
-    def _get_db(self, prefix, key) -> SqliteDict:
+            for commit in new_commit_source():
+                if commit.id in db:
+                    break
+                db[commit.id] = commit
+                yield commit
+
+    def _get_db(self, prefix, key, auto_commit=False) -> SqliteDict:
         h = hashlib.sha1()
         h.update(key.encode("utf-8"))
         table_name = "%s_%s" % (prefix, h.hexdigest())
-        return SqliteDict(self._db_file, tablename=table_name)
+        return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit)
 
 
 

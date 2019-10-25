@@ -49,7 +49,42 @@ class GithubRateLimitedRequester(object):
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
-    def paginated_get(self, url, items_selector, max_results=-1):
+    def paginated_get(self, url, items_selector, max_results=-1, reverse=False):
+        if reverse:
+            return self._paginated_get_reverse(url, items_selector, max_results)
+        else:
+            return self._paginated_get_normal(url, items_selector, max_results)
+
+    def _paginated_get_reverse(self, url, items_selector, max_results):
+        first_response = self.get(url)
+        if not first_response:
+            raise StopIteration()
+        first_json_response = first_response.json()
+        if max_results != -1 and first_json_response["total_count"] > max_results:
+            raise StopIteration()
+
+        first_url = first_response.links["first"]["url"]
+        url = first_response.links["last"]["url"]
+
+        while True:
+            if url != first_url:
+                response = self.get(url)
+                if not response:
+                    break
+                json_response = response.json()
+            else:
+                response = first_response
+                json_response = first_json_response
+
+            for item in list(items_selector(json_response))[::-1]:
+                yield item
+
+            if "prev" in response.links:
+                url = response.links["prev"]["url"]
+            else:
+                break
+
+    def _paginated_get_normal(self, url, items_selector, max_results):
         while True:
             response = self.get(url)
             if not response:

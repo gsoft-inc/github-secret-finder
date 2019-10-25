@@ -40,6 +40,7 @@ class GithubApiClient(object):
                                    repo["commits_url"].replace("{/sha}", "") + "?per_page=100",
                                    repo["branches_url"].replace("{/branch}", "") + "?per_page=100",
                                    repo["contributors_url"],
+                                   repo["compare_url"],
                                    repo["fork"])
 
     def get_repository_branches(self, repo: GithubRepository) -> Iterable[GithubBranch]:
@@ -48,8 +49,18 @@ class GithubApiClient(object):
             yield GithubBranch(item["name"], sha, "%s&sha=%s" % (repo.commits_url, sha))
 
     def get_branch_commits(self, commits_url) -> Iterable[GithubCommit]:
-        for item in self._requester.paginated_get(commits_url, lambda x: x):
-            yield GithubCommit(item["sha"], item["url"], item["html_url"])
+        for item in self._requester.paginated_get(commits_url, lambda x: x, reverse=True):
+            yield self._parse_commit(item)
+
+    def get_compare_commits(self, compare_url, base_commit, head_commit) -> Iterable[GithubCommit]:
+        response = self._requester.get(compare_url.replace("{head}", head_commit).replace("{base}", base_commit))
+        if not response:
+            raise StopIteration()
+        json_response = response.json()
+
+        # TODO Do something if there are more than 250 commits.
+        for commit in json_response["commits"][::-1]:
+            yield self._parse_commit(commit)
 
     def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
         for contributor in self._requester.paginated_get(contributors_url, lambda x: x):
@@ -58,3 +69,7 @@ class GithubApiClient(object):
                 continue
             json_response = response.json()
             yield GithubUser(json_response["login"], json_response["name"], json_response["url"], json_response["repos_url"]), contributor["contributions"]
+
+    @staticmethod
+    def _parse_commit(json):
+        return GithubCommit(json["sha"], json["url"], json["html_url"], json["commit"]["committer"]["date"])
