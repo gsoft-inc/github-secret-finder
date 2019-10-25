@@ -1,6 +1,8 @@
-from typing import Optional, Union, Iterable
-from .models import GithubRepository, GithubCommit, GithubUser, GithubBranch
+from typing import Optional, Union, Iterable, TypeVar, Callable, Dict
+from .models import GithubRepository, GithubCommit, GithubUser, GithubBranch, BaseGithubCommit
 from .github_rate_limited_requester import GithubRateLimitedRequester
+
+TCommit = TypeVar('TCommit', bound=BaseGithubCommit)
 
 
 class GithubApiClient(object):
@@ -41,23 +43,22 @@ class GithubApiClient(object):
                     repo = response.json()
             yield GithubRepository.from_json(repo)
 
-
     def get_repository_branches(self, repo: GithubRepository) -> Iterable[GithubBranch]:
         for item in self._requester.paginated_get(repo.get_branches_url(), lambda x: x):
             yield GithubBranch.from_json(item)
 
-    def get_branch_commits(self, repo: GithubRepository, branch: GithubBranch, since_commit: GithubCommit = None) -> Iterable[GithubCommit]:
+    def get_branch_commits(self, repo: GithubRepository, branch: GithubBranch, parser: Callable[[Dict], TCommit], since_commit: TCommit = None) -> Iterable[TCommit]:
         since = None
         if since_commit:
             since = since_commit.date
 
         for item in self._requester.paginated_get(branch.get_commits_url(repo, since), lambda x: x, reverse=True):
-            commit = GithubCommit.from_json(item)
+            commit = parser(item)
             if since_commit and since_commit.sha == commit.sha:
                 continue
             yield commit
 
-    def get_compare_commits(self, repo: GithubRepository, base: GithubBranch, head: GithubBranch, compare_with_parent=False) -> Iterable[GithubCommit]:
+    def get_compare_commits(self, repo: GithubRepository, base: GithubBranch, head: GithubBranch, parser: Callable[[Dict], TCommit], compare_with_parent=False) -> Iterable[TCommit]:
         response = self._requester.get(repo.get_compare_url(base, head, compare_with_parent))
         if not response:
             raise StopIteration()
@@ -65,7 +66,7 @@ class GithubApiClient(object):
 
         # TODO Do something if there are more than 250 commits.
         for commit in json_response["commits"][::-1]:
-            yield GithubCommit.from_json(commit)
+            yield parser(commit)
 
     def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
         for contributor in self._requester.paginated_get(contributors_url, lambda x: x):

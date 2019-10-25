@@ -1,16 +1,18 @@
-from typing import Iterable
-from .models import GithubCommit
+from typing import Iterable, TypeVar, Callable, Dict
+from .models import BaseGithubCommit
 from .github_rate_limited_requester import GithubRateLimitedRequester
 import logging
+
+TCommit = TypeVar('TCommit', bound=BaseGithubCommit)
 
 
 class GithubSearchClient(object):
     def __init__(self, api_tokens):
         self._requester = GithubRateLimitedRequester(api_tokens)
 
-    def search_commits(self, query) -> Iterable[GithubCommit]:
+    def search_commits(self, query, parser: Callable[[Dict], TCommit]) -> Iterable[TCommit]:
         for item in self._query_commits(query):
-            yield GithubCommit.from_json(item)
+            yield parser(item)
 
     def search_other_emails_and_names_by_login(self, login):
         emails, names, logins = self._search_for_other_emails_names_and_logins(login, "")
