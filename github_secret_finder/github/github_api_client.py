@@ -68,10 +68,16 @@ class GithubApiClient(object):
         for commit in json_response["commits"][::-1]:
             yield parser(commit)
 
-    def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
+    def get_repository_contributors(self, contributors_url) -> Iterable[Union[str, int]]:
         for contributor in self._requester.paginated_get(contributors_url, lambda x: x):
             response = self._requester.get(contributor["url"])
             if response is None:
                 continue
             json_response = response.json()
-            yield GithubUser.from_json(json_response), contributor["contributions"]
+            yield json_response["login"], contributor["contributions"]
+
+    def get_user(self, login):
+        response = self._requester.get("https://api.github.com/users/" + login)
+        if not response:
+            return None
+        return GithubUser.from_user_json(response.json())

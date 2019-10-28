@@ -52,11 +52,14 @@ class BaseGithubCommit(object):
 
     @staticmethod
     def _parse_date(s):
-        if len(s) >= 25:
-            return datetime.strptime(s[:19], "%Y-%m-%dT%H:%M:%S") + (1 if s[19] == '-' else -1) * timedelta(
-                hours=int(s[20:22]), minutes=int(s[23:25]))
-        else:
-            return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ")
+        try:
+            if len(s) >= 25:
+                return datetime.strptime(s[:19], "%Y-%m-%dT%H:%M:%S") + (1 if s[19] == '-' else -1) * timedelta(
+                    hours=int(s[20:22]), minutes=int(s[23:25]))
+            else:
+                return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            return datetime.min
 
 
 class GithubCommit(BaseGithubCommit):
@@ -79,20 +82,16 @@ class GithubUser(object):
         self.email = email
 
     @staticmethod
-    def from_json(json) -> 'GithubUser':
+    def from_user_json(json) -> 'GithubUser':
+        return GithubUser(json["login"], json["name"], json["email"])
+
+    @staticmethod
+    def from_commit_json(json, user_type) -> 'GithubUser':
+        commit_user = json["commit"][user_type]
         login = None
-        if "login" in json:
-            login = json["login"]
-
-        name = None
-        if "name" in json:
-            name = json["name"]
-
-        email = None
-        if "email" in json:
-            email = json["email"]
-
-        return GithubUser(login, name, email)
+        if json[user_type] is not None:
+            login = json[user_type]["login"]
+        return GithubUser(login, commit_user["name"], commit_user["email"])
 
 
 class GithubCommitWithUsers(BaseGithubCommit):
@@ -103,6 +102,7 @@ class GithubCommitWithUsers(BaseGithubCommit):
 
     @staticmethod
     def from_json(json) -> 'GithubCommitWithUsers':
-        author = GithubUser.from_json(json["author"])
-        committer = GithubUser.from_json(json["committer"])
-        return GithubCommitWithUsers(json["sha"], json["url"], BaseGithubCommit._parse_date(json["commit"]["committer"]["date"]), committer, author)
+        commit = json["commit"]
+        author = GithubUser.from_commit_json(json, "author")
+        committer = GithubUser.from_commit_json(json, "committer")
+        return GithubCommitWithUsers(json["sha"], json["url"], BaseGithubCommit._parse_date(commit["committer"]["date"]), committer, author)

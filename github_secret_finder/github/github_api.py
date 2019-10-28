@@ -13,6 +13,7 @@ class GithubApi(object):
     _repos_table_prefix = "repos"
     _contributors_table_prefix = "contributors"
     _branches_table_prefix = "branches"
+    _users_table = "users"
 
     def __init__(self, api_client: GithubApiClient, search_client: GithubSearchClient, db_file: str, cache_only: bool):
         self._cache_only = cache_only
@@ -33,10 +34,9 @@ class GithubApi(object):
             for commit in self._commit_fetcher.get_repository_commits(repo):
                 yield commit
 
-    def get_organization_commit_users(self, organization) -> Iterable[GithubCommitWithUsers]:
-        for repo in self.get_organization_repositories(organization):
-            for commit in self._commits_with_users_fetcher.get_repository_commits(repo):
-                yield commit
+    def get_repository_commit_users(self, repo: GithubRepository) -> Iterable[GithubCommitWithUsers]:
+        for commit in self._commits_with_users_fetcher.get_repository_commits(repo):
+            yield commit
 
     def get_commit_patch(self, url) -> str:
         return self._api_client.get_commit_patch(url)
@@ -64,16 +64,22 @@ class GithubApi(object):
     def get_repository_contributors(self, contributors_url) -> Iterable[Union[GithubUser, int]]:
         with self._get_db(self._contributors_table_prefix, contributors_url) as db:
             if not self._cache_only:
-                for user, count in self._api_client.get_repository_contributors(contributors_url):
-                    db[user.login] = user, count
+                for login, count in self._api_client.get_repository_contributors(contributors_url):
+                    db[login] = count
                 db.commit()
 
-            for x in db.itervalues():
-                yield x
+                with SqliteDict(self._db_file, tablename=self._users_table, autocommit=True) as users_db:
+                    for login, count in db.iteritems():
+                        if login in users_db:
+                            yield users_db[login], count
+                        elif not self._cache_only:
+                            user = self._api_client.get_user(login)
+                            if user:
+                                users_db[login] = user
+                                yield user, count
 
     def _get_db(self, prefix, key, auto_commit=False) -> SqliteDict:
         h = hashlib.sha1()
         h.update(key.encode("utf-8"))
         table_name = "%s_%s" % (prefix, h.hexdigest())
         return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit)
-
