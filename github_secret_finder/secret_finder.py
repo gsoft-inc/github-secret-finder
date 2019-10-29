@@ -62,7 +62,6 @@ class SecretFinder(object):
 
     def _find_secrets_from_api(self, commit_source) -> Iterable[Finding]:
         for commit in commit_source:
-            print(commit)
             if commit.sha in self._commits_db:
                 continue
 
