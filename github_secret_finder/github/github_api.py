@@ -27,7 +27,8 @@ class GithubApi(object):
         return self._commit_fetcher.search_commits(query)
 
     def search_users_from_commits(self, query) -> Iterable[GithubCommitWithUsers]:
-        return self._commits_with_users_fetcher.search_commits(query)
+        # Assume that if a query returns more than 3000 results, it's too generic.
+        return self._commits_with_users_fetcher.search_commits(query, max_results=3000)
 
     def get_organization_commits(self, organization) -> Iterable[GithubCommit]:
         for repo in self.get_organization_repositories(organization):

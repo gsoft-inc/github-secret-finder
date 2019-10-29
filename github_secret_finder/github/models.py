@@ -77,9 +77,15 @@ class GithubCommit(BaseGithubCommit):
 
 class GithubUser(object):
     def __init__(self, login, name, email):
-        self.login = login
-        self.name = name
-        self.email = email
+        self.login = login.lower() if login else None
+        self.name = name.lower() if name else None
+        self.email = email.lower() if email else None
+
+    def __hash__(self):
+        return hash((self.login, self.email, self.name))
+
+    def __eq__(self, other):
+        return (self.login, self.email, self.name) == (other.login, other.email, other.name)
 
     @staticmethod
     def from_user_json(json) -> 'GithubUser':

@@ -1,8 +1,28 @@
 import argparse
 import logging
-import operator
-
+from enum import Enum
 from github import GithubApiClient, GithubSearchClient, GithubApi
+from github.models import GithubUser
+
+
+class UserSourceType(Enum):
+    Organization = 1,
+    Search = 2
+
+
+class UserRelation(object):
+    def __init__(self, user: GithubUser, user_source: UserSourceType):
+        self.user = user
+        self.relations = set()
+        self.parents = set()
+        self.user_source = user_source
+
+    def add_relation(self, relation):
+        if not any(r.user == relation.user for r in self.relations):
+            self.relations.add(relation)
+
+        if not any(p.user == relation.user for p in relation.parents):
+            relation.parents.add(self)
 
 
 def get_users_from_contributors(api: GithubApi, repo):
@@ -17,27 +37,8 @@ def get_users_from_commits(api: GithubApi, repo):
             yield user, 1
 
 
-def get_sorted_user_informations(api: GithubApi, orgs):
-    emails = {}
-    names = {}
-    logins = {}
-
-    for org in orgs:
-        for repo in api.get_organization_repositories(org):
-            for source in [get_users_from_contributors, get_users_from_commits]:
-                for user, count in source(api, repo):
-                    update_counts(emails, user.email, count, is_email_blacklisted)
-                    update_counts(names, user.name, count, is_name_blacklisted)
-                    update_counts(logins, user.login, count, is_login_blacklisted)
-
-    sorted_emails = list(x[0] for x in sorted(emails.items(), key=operator.itemgetter(1), reverse=True))
-    sorted_names = list(x[0] for x in sorted(names.items(), key=operator.itemgetter(1), reverse=True))
-    sorted_logins = list(x[0] for x in sorted(logins.items(), key=operator.itemgetter(1), reverse=True))
-    return sorted_emails, sorted_names, sorted_logins
-
-
 def is_email_blacklisted(email):
-    return "@" not in email or email.endswith("@users.noreply.github.com") or email.endswith("@github.com")
+    return not email or email == "noreply@github.com" or "@" not in email
 
 
 def is_login_blacklisted(login):
@@ -45,30 +46,40 @@ def is_login_blacklisted(login):
 
 
 def is_name_blacklisted(name):
-    return not name or name in ["web-flow"]
+    return not name or name in ["web-flow", "github", "unknown", "first last"] or not " " in name  # The name probably won't be generic enough if there is no space in it.
 
 
-def update_counts(counts, value, count=1, is_blacklisted=None):
-    if not value or (is_blacklisted and is_blacklisted(value)):
-        return
+def get_users_from_organizations(api: GithubApi, organizations):
+    user_relations = {}
+    for org in organizations:
+        logging.info("Fetching repositories from %s" % org)
+        for repo in api.get_organization_repositories(org):
+            for source, log_string in [(get_users_from_contributors, "Fetching contributors"), (get_users_from_commits, "Fetching commit users")]:
+                logging.info("%s from %s" % (log_string, repo.name))
+                for user, count in source(api, repo):
+                    new_relation = UserRelation(user, UserSourceType.Organization)
+                    for value, is_blacklisted in [(user.login, is_login_blacklisted),
+                                                  (user.email, is_email_blacklisted),
+                                                  (user.name, is_name_blacklisted)]:
+                        if not value or (is_blacklisted and is_blacklisted(value)):
+                            continue
+                        if value in user_relations:
+                            user_relations[value].add_relation(new_relation)
+                        else:
+                            user_relations[value] = new_relation
+    return user_relations
 
-    value = value.lower()
-    if value not in counts:
-        counts[value] = 0
-    counts[value] += count
 
-
-def search_additionnal_user_informations(api, logins, emails, names, on_new_login, on_new_email, on_new_name):
+def get_user_informations_hierarchy(api, organizations):
     emails_operation = "emails"
     logins_operation = "logins"
     names_operation = "names"
 
-    for x in emails:
-        on_new_email(x, "")
-    for x in logins:
-        on_new_login(x, "")
-    for x in names:
-        on_new_name(x, "")
+    user_relations = get_users_from_organizations(api, organizations)
+
+    emails = list(set(r.user.email for r in user_relations.values() if r.user.email))
+    logins = list(set(r.user.login for r in user_relations.values() if r.user.login))
+    names = list(set(r.user.name for r in user_relations.values() if r.user.name))
 
     operations = [logins_operation, emails_operation, names_operation]
     inputs = {emails_operation: emails, logins_operation: logins, names_operation: names}
@@ -80,30 +91,67 @@ def search_additionnal_user_informations(api, logins, emails, names, on_new_logi
         if operation is None:
             break
 
-        value = inputs[operation].pop(0)
+        # Start with the most specific queries.
+        value = max(inputs[operation], key=len)
+        inputs[operation].remove(value)
+
+        if value not in user_relations:
+            continue
         results[operation].add(value)
 
         user_type_selector = {"author": lambda x: x.author, "committer": lambda x: x.committer}
 
         for prefix, selector in user_type_selector.items():
             query = "%s%s:\"%s\"" % (prefix, query_suffixes[operation], value)
+            logging.info(query)
             for commit_with_user in api.search_users_from_commits(query):
                 user = selector(commit_with_user)
                 login = user.login.lower() if user.login else None
                 email = user.email.lower() if user.email else None
                 name = user.name.lower() if user.name else None
 
+                new_relation = UserRelation(user, UserSourceType.Search)
+                user_relations[value].add_relation(new_relation)
+
                 if not is_login_blacklisted(login) and login not in results[logins_operation] and login not in inputs[logins_operation]:
                     inputs[logins_operation].append(login)
-                    on_new_login(login, query)
+                    user_relations[login] = new_relation
 
                 if not is_name_blacklisted(name) and name not in results[names_operation] and name not in inputs[names_operation]:
                     inputs[names_operation].append(name)
-                    on_new_name(name, query)
+                    user_relations[name] = new_relation
 
                 if not is_email_blacklisted(email) and email not in results[emails_operation] and email not in inputs[emails_operation]:
                     inputs[emails_operation].append(email)
-                    on_new_email(email, query)
+                    user_relations[email] = new_relation
+
+    returned_relations = set()
+    for r in user_relations.values():
+        if len(r.parents) > 0 or r in returned_relations:
+            continue
+        returned_relations.add(r)
+        yield r
+
+
+def flatten_relations(relation: UserRelation):
+    names = set()
+    logins = set()
+    emails = set()
+
+    user = relation.user
+    for value, col, is_blacklisted in [(user.name, names, is_name_blacklisted),
+                                       (user.login, logins, is_login_blacklisted),
+                                       (user.email, emails, is_email_blacklisted)]:
+        if value and not is_blacklisted(value):
+            col.add((relation.user_source, value))
+
+    for r in relation.relations:
+        relation_logins, relation_emails, relation_names = flatten_relations(r)
+        logins.update(relation_logins)
+        emails.update(relation_emails)
+        names.update(relation_names)
+
+    return logins, emails, names
 
 
 def main():
@@ -113,7 +161,6 @@ def main():
     parser.add_argument('--tokens', '-t', action="store", dest='tokens', help="Github tokens separated by a comma (,)", required=True)
     parser.add_argument('--cached', '-c', action="store_true", dest='cached', default=False, help="Only use cached values.")
     parser.add_argument('--verbose', '-V', action="store_true", dest='verbose', default=False, help="Increases output verbosity.")
-
     args = parser.parse_args()
 
     if args.verbose:
@@ -121,7 +168,7 @@ def main():
         logging.getLogger().setLevel(logging.INFO)
 
     tokens = [t.strip() for t in args.tokens.split(",")]
-    api = GithubApi(GithubApiClient(tokens), GithubSearchClient(tokens), "github-secret-finder.sqlite", True)
+    api = GithubApi(GithubApiClient(tokens), GithubSearchClient(tokens), "github-secret-finder.sqlite", args.cached)
 
     if args.organizations:
         with open(args.organizations) as f:
@@ -129,18 +176,22 @@ def main():
     else:
         organizations = [args.organization]
 
-    emails, names, logins = get_sorted_user_informations(api, organizations)
+    for relation in get_user_informations_hierarchy(api, organizations):
+        print("============================")
+        logins, emails, names = flatten_relations(relation)
+        displayed_logins = set()
+        displayed_names = set()
+        displayed_emails = set()
 
-    api = GithubApi(GithubApiClient(tokens), GithubSearchClient(tokens), "github-secret-finder.sqlite", False)
-    search_additionnal_user_informations(api,
-                                         logins,
-                                         emails,
-                                         names,
-                                         lambda x, q: print("New login: %s (%s)" % (x, q)),
-                                         lambda x, q: print("New email: %s (%s)" % (x, q)),
-                                         lambda x, q: print("New name: %s (%s)" % (x, q)))
+        for source_type in [UserSourceType.Organization, UserSourceType.Search]:
+            for values, description, displayed in [(logins, "Logins", displayed_logins),
+                                                   (names, "Names", displayed_names),
+                                                   (emails, "Emails", displayed_emails)]:
+                values = [x[1] for x in values if x[0] == source_type and x[1] not in displayed]
+                displayed.update(values)
+                if len(values) > 0:
+                    print("%s (%s): %s" % (description, source_type.name, ", ".join(values)))
 
 
 if __name__ == "__main__":
     main()
-

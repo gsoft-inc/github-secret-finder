@@ -18,8 +18,8 @@ class GithubCommitInformationFetcher(Generic[T]):
         self._search_client = search_client
         self._api_client = api_client
 
-    def search_commits(self, query) -> Iterable[T]:
-        return self._get_commits(query, lambda x: self._search_client.search_commits(query, self._json_parser))
+    def search_commits(self, query, max_results=-1) -> Iterable[T]:
+        return self._get_commits(query, lambda x: self._search_client.search_commits(query, self._json_parser, max_results))
 
     def get_repository_commits(self, repo: GithubRepository) -> Iterable[T]:
         branches = list(self._get_repository_branches(repo))

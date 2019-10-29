@@ -9,8 +9,8 @@ class GithubSearchClient(object):
     def __init__(self, api_tokens):
         self._requester = GithubRateLimitedRequester(api_tokens)
 
-    def search_commits(self, query, parser: Callable[[Dict], TCommit]) -> Iterable[TCommit]:
-        for item in self._query_commits(query):
+    def search_commits(self, query, parser: Callable[[Dict], TCommit], max_results=-1) -> Iterable[TCommit]:
+        for item in self._query_commits(query, max_results):
             yield parser(item)
 
     def _query_commits(self, query, max_results=-1):
