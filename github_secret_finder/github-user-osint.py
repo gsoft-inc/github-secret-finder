@@ -20,8 +20,6 @@ class UserRelation(object):
     def add_relation(self, relation):
         if not any(r.user == relation.user for r in self.relations):
             self.relations.add(relation)
-
-        if not any(p.user == relation.user for p in relation.parents):
             relation.parents.add(self)
 
 
@@ -92,38 +90,36 @@ def get_user_informations_hierarchy(api, organizations):
             break
 
         # Start with the most specific queries.
-        value = max(inputs[operation], key=len)
-        inputs[operation].remove(value)
+        value_to_query = max(inputs[operation], key=len)
+        inputs[operation].remove(value_to_query)
 
-        if value not in user_relations:
+        if value_to_query not in user_relations:
             continue
-        results[operation].add(value)
+        results[operation].add(value_to_query)
 
         user_type_selector = {"author": lambda x: x.author, "committer": lambda x: x.committer}
 
         for prefix, selector in user_type_selector.items():
-            query = "%s%s:\"%s\"" % (prefix, query_suffixes[operation], value)
+            query = "%s%s:\"%s\"" % (prefix, query_suffixes[operation], value_to_query)
             logging.info(query)
             for commit_with_user in api.search_users_from_commits(query):
                 user = selector(commit_with_user)
-                login = user.login.lower() if user.login else None
-                email = user.email.lower() if user.email else None
-                name = user.name.lower() if user.name else None
 
                 new_relation = UserRelation(user, UserSourceType.Search)
-                user_relations[value].add_relation(new_relation)
+                user_relations[value_to_query].add_relation(new_relation)
 
-                if not is_login_blacklisted(login) and login not in results[logins_operation] and login not in inputs[logins_operation]:
-                    inputs[logins_operation].append(login)
-                    user_relations[login] = new_relation
-
-                if not is_name_blacklisted(name) and name not in results[names_operation] and name not in inputs[names_operation]:
-                    inputs[names_operation].append(name)
-                    user_relations[name] = new_relation
-
-                if not is_email_blacklisted(email) and email not in results[emails_operation] and email not in inputs[emails_operation]:
-                    inputs[emails_operation].append(email)
-                    user_relations[email] = new_relation
+                for value, operation, is_blacklisted in [(user.login, logins_operation, is_login_blacklisted),
+                                                         (user.email, emails_operation, is_email_blacklisted),
+                                                         (user.name, names_operation, is_name_blacklisted)]:
+                    if not value:
+                        continue
+                    value = value.lower()
+                    if not is_blacklisted(value) and value not in results[operation] and value not in inputs[operation]:
+                        inputs[operation].append(value)
+                        if value in user_relations:
+                            user_relations[value].add_relation(new_relation)
+                        else:
+                            user_relations[value] = new_relation
 
     returned_relations = set()
     for r in user_relations.values():

@@ -36,8 +36,7 @@ class GithubApi(object):
                 yield commit
 
     def get_repository_commit_users(self, repo: GithubRepository) -> Iterable[GithubCommitWithUsers]:
-        for commit in self._commits_with_users_fetcher.get_repository_commits(repo):
-            yield commit
+        return self._commits_with_users_fetcher.get_repository_commits(repo)
 
     def get_commit_patch(self, url) -> str:
         return self._api_client.get_commit_patch(url)
