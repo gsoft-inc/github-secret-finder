@@ -23,11 +23,9 @@ def create_list_from_args(file_name, single_value = None):
 
 def print_result(result):
     width = shutil.get_terminal_size((80, 20)).columns
-    prefix = result.commit.html_url + " - "
-    secret_width = width - len(prefix)
-    if secret_width < 20:
-        secret_width = 20
-    print("%s%s" % (prefix, result.secret.to_terminal_string(secret_width)))
+    print("=" * 15)
+    print(result.commit.html_url)
+    print(result.secret.to_terminal_string(width))
 
 
 def create_slack_finding_sender(args, db_file):

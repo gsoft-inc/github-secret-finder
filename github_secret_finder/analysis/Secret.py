@@ -14,7 +14,7 @@ class Secret(object):
         return self._to_string_internal(line, secret_value, markdown_format, markdown_format[::-1], 100)
 
     def to_terminal_string(self, max_width):
-        return self._to_string_internal(self.line, self.value, '\033[1m', '\033[0m', max_width)
+        return self.file_name + "\n" + self._to_string_internal(self.line, self.value, '\033[1m', '\033[0m', max_width)
 
     @staticmethod
     def _to_string_internal(line, secret, format_start, format_end, max_width):
