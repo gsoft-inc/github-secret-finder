@@ -30,7 +30,7 @@ class PatchAnalyzer(object):
         try:
             patch = PatchSet.from_string(patch_text)
         except UnidiffParseError:
-            raise StopIteration
+            return
 
         for p in self._plugins:
             for patch_file in patch:
@@ -38,7 +38,7 @@ class PatchAnalyzer(object):
                     for line in chunk.target_lines():
                         if line.is_added:
                             l = line.value.strip()
-                            for k in p.analyze_string(l, line.target_line_no, patch_file.path):
+                            for k in p.analyze_line(l, line.target_line_no, patch_file.path):
                                 if len(k.secret_value) < 6:
                                     continue  # Ignore small secrets to reduce false positives.
 

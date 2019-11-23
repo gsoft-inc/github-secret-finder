@@ -80,10 +80,10 @@ class GithubRateLimitedRequester(object):
         first_url = url
         first_response = self.get(url)
         if not first_response:
-            raise StopIteration()
+            return
         first_json_response = first_response.json()
         if max_results != -1 and first_json_response["total_count"] > max_results:
-            raise StopIteration()
+            return
 
         if "last" in first_response.links:
             url = first_response.links["last"]["url"]

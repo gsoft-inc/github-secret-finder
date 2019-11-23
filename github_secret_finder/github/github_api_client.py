@@ -61,7 +61,7 @@ class GithubApiClient(object):
     def get_compare_commits(self, repo: GithubRepository, base: GithubBranch, head: GithubBranch, parser: Callable[[Dict], TCommit], compare_with_parent=False) -> Iterable[TCommit]:
         response = self._requester.get(repo.get_compare_url(base, head, compare_with_parent))
         if not response:
-            raise StopIteration()
+            return
         json_response = response.json()
 
         # TODO Do something if there are more than 250 commits.
