@@ -102,7 +102,11 @@
     "file": "(?i)(Base64||base64binary)(\\.min)?\\.js$"
   },
   {
-    "file": "npm-debug.log$",
+    "file": "npm-debug\\.log$",
     "code": "(addRemoteTarball|shasum)"
+  },
+  {
+    "file": "\\.html$",
+    "code": "integrity=\"sha\\d+"
   }
 ]
