@@ -1,0 +1,112 @@
+[
+  {
+    "secret": "^(\"\"|'')?(\\))?[;,]?$"
+  },
+  {
+    "secret": "(\\*|#)+"
+  },
+  {
+    "file": ".*\\.ps1$",
+    "secret": "^(get-content|convertto-securestring)$"
+  },
+  {
+    "file": "node_modules/.*package\\.json$"
+  },
+  {
+    "file": "\\.css$"
+  },
+  {
+    "file": "\\.scss$"
+  },
+  {
+    "file": "\\.less$"
+  },
+  {
+    "file": "\\.dll.manifest$"
+  },
+  {
+    "file": "file_sigs\\.json$"
+  },
+  {
+    "file": "\\.idea/misc\\.xml$",
+    "code": "IDEtalkID"
+  },
+  {
+    "file": "\\.vsto$",
+    "code": "assemblyIdentity"
+  },
+  {
+    "file": "\\.csproj$",
+    "code": "PublishedHash"
+  },
+  {
+    "file": "\\.bower\\.json$",
+    "code": "commit"
+  },
+  {
+    "file": "\\.xcscheme$",
+    "code": "BlueprintIdentifier"
+  },
+  {
+    "file": "(?i)Web\\.config(\\.(un)?install\\.xdt)?$",
+    "code": "(?i)PublicKeyToken"
+  },
+  {
+    "file": "(?i)App\\.config$",
+    "code": "(?i)PublicKeyToken"
+  },
+  {
+    "file": "\\.dll\\.config$",
+    "code": "(?i)PublicKeyToken"
+  },
+  {
+    "file": "project\\.lock\\.json$",
+    "code": "sha512"
+  },
+  {
+    "file": "\\.apm/.*package.json$",
+    "code": "_shasum"
+  },
+  {
+    "file": "\\.json$",
+    "code": "(gitHead|shasum)"
+  },
+  {
+    "file": "\\.deps\\.json$",
+    "code": "signature"
+  },
+  {
+    "file": "precache-manifest.*\\.js$",
+    "code": "revision"
+  },
+  {
+    "file": "(?i)Pipfile\\.lock$",
+    "code": "sha256"
+  },
+  {
+    "file": "csproj\\.nuget\\.cache$"
+  },
+  {
+    "file": "\\.import/.*\\.md5$"
+  },
+  {
+    "file": "\\.lock$"
+  },
+  {
+    "file": "\\.graphql$"
+  },
+  {
+    "file": "package-lock\\.json$"
+  },
+  {
+    "file": "(?i)(Base64||base64binary)(\\.min)?\\.js$"
+  },
+  {
+    "file": "npm-debug\\.log$",
+    "code": "(addRemoteTarball|shasum)"
+  },
+  {
+    "file": "\\.html$",
+    "code": "integrity=\"sha\\d+"
+  }
+]
