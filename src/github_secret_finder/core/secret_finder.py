@@ -7,6 +7,7 @@ from .analysis import PatchAnalyzer
 from .findings import FindingsDatabase
 from .findings.finding import Finding
 from .github import GithubApiClient, GithubSearchClient, GithubApi
+from .util.legacy_unpickler import legacy_decode
 
 
 class SecretFinder(object):
@@ -18,7 +19,7 @@ class SecretFinder(object):
 
     def __enter__(self):
         if not hasattr(self, '_commits_db') or self._commits_db is None:
-            self._commits_db = SqliteDict(self._db_file, tablename="analyzed_commits", autocommit=True)
+            self._commits_db = SqliteDict(self._db_file, tablename="analyzed_commits", autocommit=True, decode=legacy_decode)
 
         if not hasattr(self, '_findings_db') or self._findings_db is None:
             self._findings_db = FindingsDatabase(self._db_file)

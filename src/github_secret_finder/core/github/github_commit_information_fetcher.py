@@ -6,6 +6,7 @@ from sqlitedict import SqliteDict
 from .github_api_client import GithubApiClient
 from .github_search_client import GithubSearchClient
 from .models import GithubRepository, GithubBranch, BaseGithubCommit
+from ..util.legacy_unpickler import legacy_decode
 
 T = TypeVar('T', bound=BaseGithubCommit)
 
@@ -78,7 +79,7 @@ class GithubCommitInformationFetcher(Generic[T]):
         h = hashlib.sha1()
         h.update(key.encode("utf-8"))
         table_name = "%s_%s" % (prefix, h.hexdigest())
-        return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit)
+        return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit, decode=legacy_decode)
 
     @staticmethod
     def _get_branch_cache_key(repo: GithubRepository, branch: GithubBranch):

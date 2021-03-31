@@ -7,6 +7,7 @@ from .github_api_client import GithubApiClient
 from .github_commit_information_fetcher import GithubCommitInformationFetcher
 from .github_search_client import GithubSearchClient
 from .models import GithubCommit, GithubRepository, GithubBranch, GithubCommitWithUsers, GithubUser
+from ..util.legacy_unpickler import legacy_decode
 
 
 class GithubApi(object):
@@ -70,7 +71,7 @@ class GithubApi(object):
                     db[login] = count
                 db.commit()
 
-                with SqliteDict(self._db_file, tablename=self._users_table, autocommit=True) as users_db:
+                with SqliteDict(self._db_file, tablename=self._users_table, autocommit=True, decode=legacy_decode) as users_db:
                     for login, count in db.iteritems():
                         if login in users_db:
                             yield users_db[login], count
@@ -84,4 +85,4 @@ class GithubApi(object):
         h = hashlib.sha1()
         h.update(key.encode("utf-8"))
         table_name = "%s_%s" % (prefix, h.hexdigest())
-        return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit)
+        return SqliteDict(self._db_file, tablename=table_name, autocommit=auto_commit, decode=legacy_decode)
