@@ -1,6 +1,8 @@
 from typing import Iterable
+
 from sqlitedict import SqliteDict
-from findings.finding import Finding
+
+from .finding import Finding
 
 
 class FindingsDatabase(object):

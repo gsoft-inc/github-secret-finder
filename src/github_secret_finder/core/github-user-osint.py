@@ -1,8 +1,9 @@
 import argparse
 import logging
 from enum import Enum
-from github import GithubApiClient, GithubSearchClient, GithubApi
-from github.models import GithubUser
+
+from .github import GithubApiClient, GithubSearchClient, GithubApi
+from .github.models import GithubUser
 
 
 class UserSourceType(Enum):

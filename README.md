@@ -4,7 +4,7 @@ Script to monitor commits from Github users and organizations for secrets.
 
 ## Setup
 ```
-pip3 install -r requirements.txt
+python3 setup.py install
 ```
 
 Create a new readonly personal access token here: https://github.com/settings/tokens

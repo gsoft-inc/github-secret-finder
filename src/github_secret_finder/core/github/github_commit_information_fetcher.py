@@ -1,9 +1,11 @@
 import hashlib
 from typing import Iterable, TypeVar, Generic, Callable, Dict
+
 from sqlitedict import SqliteDict
-from github.models import GithubRepository, GithubBranch, BaseGithubCommit
-from .github_search_client import GithubSearchClient
+
 from .github_api_client import GithubApiClient
+from .github_search_client import GithubSearchClient
+from .models import GithubRepository, GithubBranch, BaseGithubCommit
 
 T = TypeVar('T', bound=BaseGithubCommit)
 

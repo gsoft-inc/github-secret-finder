@@ -1,9 +1,11 @@
-from typing import Iterable
-import requests
-from findings import FindingsDatabase
-from findings.finding import Finding
-from .stoppable_thread import StoppableThread
 import itertools
+from typing import Iterable
+
+import requests
+
+from .stoppable_thread import StoppableThread
+from ..findings import FindingsDatabase
+from ..findings.finding import Finding
 
 
 class SlackFindingSender(object):

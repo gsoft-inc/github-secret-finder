@@ -1,10 +1,12 @@
-from typing import Iterable
-from analysis import PatchAnalyzer
-from findings.finding import Finding
-from github import GithubApiClient, GithubSearchClient, GithubApi
-from findings import FindingsDatabase
-from sqlitedict import SqliteDict
 import logging
+from typing import Iterable
+
+from sqlitedict import SqliteDict
+
+from .analysis import PatchAnalyzer
+from .findings import FindingsDatabase
+from .findings.finding import Finding
+from .github import GithubApiClient, GithubSearchClient, GithubApi
 
 
 class SecretFinder(object):

@@ -1,10 +1,12 @@
-from typing import Iterable, Union
-from sqlitedict import SqliteDict
-from .models import GithubCommit, GithubRepository, GithubBranch, GithubCommitWithUsers, GithubUser
-from .github_api_client import GithubApiClient
-from .github_search_client import GithubSearchClient
-from .github_commit_information_fetcher import GithubCommitInformationFetcher
 import hashlib
+from typing import Iterable, Union
+
+from sqlitedict import SqliteDict
+
+from .github_api_client import GithubApiClient
+from .github_commit_information_fetcher import GithubCommitInformationFetcher
+from .github_search_client import GithubSearchClient
+from .models import GithubCommit, GithubRepository, GithubBranch, GithubCommitWithUsers, GithubUser
 
 
 class GithubApi(object):

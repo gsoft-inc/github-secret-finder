@@ -195,4 +195,4 @@ dmypy.json
 .pyre/
 
 data/
-/github_secret_finder/github-secret-finder.sqlite
+github-secret-finder.sqlite

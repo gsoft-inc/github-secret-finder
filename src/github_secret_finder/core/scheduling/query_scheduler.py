@@ -1,9 +1,10 @@
 import operator
+from datetime import datetime
 from typing import Iterable
 
 from sqlitedict import SqliteDict
+
 from .query_scheduler_operation import QuerySchedulerOperation
-from datetime import datetime
 
 
 class QueryScheduler(object):
