@@ -11,7 +11,7 @@ Create a new readonly personal access token here: https://github.com/settings/to
 
 ## Usage
 ```
-usage: main.py [-h] [--users USERS] [--user USER] [--emails EMAILS]
+usage: github-secret-finder [-h] [--users USERS] [--user USER] [--emails EMAILS]
                [--email EMAIL] [--names NAMES] [--name NAME]
                [--organizations ORGANIZATIONS] [--organization ORGANIZATION]
                --tokens TOKENS [--blacklist BLACKLIST_FILE]
