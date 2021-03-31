@@ -1,9 +1,11 @@
 import operator
+from datetime import datetime
 from typing import Iterable
 
 from sqlitedict import SqliteDict
+
 from .query_scheduler_operation import QuerySchedulerOperation
-from datetime import datetime
+from ..util.legacy_unpickler import legacy_decode
 
 
 class QueryScheduler(object):
@@ -29,7 +31,7 @@ class QueryScheduler(object):
         }
 
     def execute(self, users, emails, names, organizations):
-        with SqliteDict(self.db_file, tablename="query_log", autocommit=True) as db:
+        with SqliteDict(self.db_file, tablename="query_log", autocommit=True, decode=legacy_decode) as db:
             operations = self._get_operations(db, users, emails, names, organizations)
 
             if self.cache_only:

@@ -1,6 +1,7 @@
 from typing import Optional, Union, Iterable, TypeVar, Callable, Dict
-from .models import GithubRepository, GithubCommit, GithubUser, GithubBranch, BaseGithubCommit
+
 from .github_rate_limited_requester import GithubRateLimitedRequester
+from .models import GithubRepository, GithubUser, GithubBranch, BaseGithubCommit
 
 TCommit = TypeVar('TCommit', bound=BaseGithubCommit)
 

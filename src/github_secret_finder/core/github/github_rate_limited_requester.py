@@ -1,12 +1,14 @@
-import operator
-import requests
-import time
-from datetime import datetime
-from requests import RequestException
-from .github_token_rate_limit_information import GithubTokenRateLimitInformation
 import logging
+import operator
+import time
 import urllib.parse as urlparse
+from datetime import datetime
 from urllib.parse import urlencode
+
+import requests
+from requests import RequestException
+
+from .github_token_rate_limit_information import GithubTokenRateLimitInformation
 
 
 class GithubRateLimitedRequester(object):

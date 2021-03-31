@@ -1,6 +1,7 @@
 import uuid
-from analysis import Secret
-from github.models import GithubCommit
+
+from ..analysis import Secret
+from ..github.models import GithubCommit
 
 
 class Finding(object):

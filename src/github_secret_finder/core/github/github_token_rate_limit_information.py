@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 import email.utils as eut
+from datetime import datetime, timedelta
 
 
 class GithubTokenRateLimitInformation(object):

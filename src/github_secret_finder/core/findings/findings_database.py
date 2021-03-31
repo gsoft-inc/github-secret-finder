@@ -1,11 +1,14 @@
 from typing import Iterable
+
 from sqlitedict import SqliteDict
-from findings.finding import Finding
+
+from .finding import Finding
+from ..util.legacy_unpickler import legacy_decode
 
 
 class FindingsDatabase(object):
     def __init__(self, db_file):
-        self._findings_db = SqliteDict(db_file, tablename="findings", autocommit=True)
+        self._findings_db = SqliteDict(db_file, tablename="findings", autocommit=True, decode=legacy_decode)
 
     def close(self):
         self._findings_db.close()
@@ -22,5 +25,3 @@ class FindingsDatabase(object):
 
     def update(self, finding):
         self._findings_db[finding.id] = finding
-
-

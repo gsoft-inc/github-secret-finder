@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
-from secret_finder import SecretFinder
-from scheduling import QueryScheduler
 import logging
-from slack import SlackFindingSender
-from contextlib import contextmanager
 import shutil
+from contextlib import contextmanager
+from pathlib import Path
+
+from core.scheduling import QueryScheduler
+from core.secret_finder import SecretFinder
+from core.slack import SlackFindingSender
 
 
 def create_list_from_args(file_name, single_value = None):
@@ -36,9 +37,8 @@ def create_slack_finding_sender(args, db_file):
 
 
 def main():
-    directory = os.path.dirname(os.path.realpath(__file__))
-    default_blacklist = os.path.join(directory, "default-blacklist.json")
-    database_file_name = os.path.join(directory, "github-secret-finder.sqlite")
+    default_blacklist = Path(__file__).parent / "data/default-blacklist.json"
+    database_file_name = "github-secret-finder.sqlite"
 
     parser = argparse.ArgumentParser(description='Github Secret Finder')
     parser.add_argument('--users', '-U', action='store', dest='users', help='File containing Github users to monitor.')
