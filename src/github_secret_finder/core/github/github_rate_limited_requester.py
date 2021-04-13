@@ -35,6 +35,9 @@ class GithubRateLimitedRequester(object):
 
                     if response.status_code == 200:
                         return response
+
+                    if response.status_code == 404:
+                        return None
                 except RequestException:
                     continue
 
